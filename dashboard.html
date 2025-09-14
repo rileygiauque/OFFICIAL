@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - {{ session.bd_name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<style>
+
+#platform-status {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.col-username {
+    flex: 0 0 120px;
+    text-align: center;
+}
+
+.username-badge {
+    background: #e8f4fd;
+    color: #1976d2;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.col-queued {
+    flex: 0 0 100px;
+    text-align: center;
+}
+
+.queued-count {
+    background: #e3f2fd;
+    color: #1565c0;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* Broker-Dealer Summary Styles */
+
+/* Broker-Dealer Summary Styles */
+.broker-dealer-summary {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.broker-dealer-summary h2 {
+    margin-bottom: 1.5rem;
+    color: #2c3e50;
+    font-size: 1.5rem;
+}
+
+.bd-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.5rem;
+}
+
+.bd-card {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.bd-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+}
+
+.bd-header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.bd-header h3 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 1.3rem;
+    font-weight: 600;
+}
+
+.bd-metrics {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.metric-row {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap: 2rem;
+}
+
+.metric-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    flex: 1;
+}
+
+.metric-number {
+    font-size: 2.5rem;
+    font-weight: bold;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+}
+
+.metric-number.clean {
+    color: #28a745;
+}
+
+.metric-number.warning {
+    color: #dc3545;
+}
+
+.metric-label {
+    font-size: 0.9rem;
+    color: #6c757d;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-row {
+    display: flex;
+    justify-content: center;
+    padding-top: 1rem;
+    border-top: 1px solid #e9ecef;
+}
+
+.status-badge {
+    padding: 0.5rem 1.5rem;
+    border-radius: 25px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-align: center;
+    min-width: 140px;
+}
+
+.status-badge.clean {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.status-badge.warning {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.bd-stats {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.bd-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+}
+
+.broker-dealer-summary {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.broker-dealer-summary h2 {
+    margin-bottom: 1.5rem;
+    color: #2c3e50;
+    font-size: 1.5rem;
+}
+
+.bd-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.bd-card {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.bd-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+}
+
+.bd-header h3 {
+    margin: 0 0 1rem 0;
+    color: #495057;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.bd-stats {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.bd-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.bd-number {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 0.25rem;
+}
+
+.bd-number.clean {
+    color: #28a745;
+}
+
+.bd-number.warning {
+    color: #dc3545;
+}
+
+.bd-label {
+    font-size: 0.9rem;
+    color: #6c757d;
+    text-align: center;
+}
+
+.bd-status {
+    display: flex;
+    align-items: center;
+}
+
+.status-indicator {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.status-indicator.clean {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-indicator.warning {
+    background: #f8d7da;
+    color: #721c24;
+}
+</style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h2>{{ session.bd_name }} - Website Monitor</h2>
+            <div class="nav-actions">
+                <a href="{{ url_for('add_advisor') }}" class="btn btn-secondary">Add Firm</a>
+		<a href="{{ url_for('scan_now') }}" class="btn btn-primary">Scan All Websites</a>
+		<!-- Refresh Buttons -->
+		<a href="{{ url_for('refresh_all_facebook') }}" class="btn btn-primary" style="background: #1877f2;">📘 Refresh All Facebook</a>
+    		<a href="{{ url_for('refresh_all_linkedin') }}" class="btn btn-primary" style="background: #0077b5;">💼 Refresh All LinkedIn</a>
+    		<a href="{{ url_for('refresh_all_twitter') }}" class="btn btn-primary" style="background: #1da1f2;">🐦 Refresh All Twitter</a>
+
+		<!-- API Post Gathering -->
+		<button id="retrieveAllFacebook" 
+        class="btn btn-primary" 
+        style="background: #1877f2;">
+   ⚡ Retrieve All Facebook Queued Profiles
+</button>
+
+		<!-- Compliance Check Buttons -->
+    <a href="{{ url_for('check_all_facebook_posts') }}" class="btn btn-secondary" style="background: #dc3545;">🛡️ Check All Facebook</a>
+    <a href="{{ url_for('check_all_linkedin_posts') }}" class="btn btn-secondary" style="background: #dc3545;">🛡️ Check All LinkedIn</a>
+    <a href="{{ url_for('check_all_twitter_posts') }}" class="btn btn-secondary" style="background: #dc3545;">🛡️ Check All Twitter</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<!-- Platform Status Container -->
+<div id="platform-status"></div>
+
+        
+
+
+
+
+        {% if advisor_data %}
+            <div class="advisors-list">
+                <h2>Monitored Advisors</h2>
+                <div class="advisors-table">
+    <div class="table-header">
+        
+        <div class="col-firm">Name</div>
+        <div class="col-broker">Details</div>
+        <div class="col-status">Last Scan</div>
+        <div class="col-queued">Queued Sites</div>
+        <div class="col-queued">Issues</div>
+        <div class="col-username">Added By</div>
+        <div class="col-actions">Actions</div>
+    </div>
+    
+    {% for advisor_id, data in advisor_data.items() %}
+<div class="table-row">
+    <!-- Debug: Let's see what we're working with -->
+    <script>
+  console.log('Record ID {{ advisor_id }}:', {{ {
+    "id": advisor_id,
+    "name": data.advisor.name|default(''),
+    "firm": data.advisor.firm|default(''),
+    "website_url": data.advisor.website_url|default(''),
+    "added_by_username": data.advisor.added_by_username|default('Unknown')
+  } | tojson }});
+</script>
+
+    <div class="col-firm">
+    {% if data.advisor.website_url %}
+        <strong>{{ data.advisor.firm or data.advisor.name or 'Unknown' }}</strong>
+    {% else %}
+        <strong>{{ data.advisor.name or data.advisor.firm or 'Unknown' }}</strong>
+    {% endif %}
+</div>
+
+
+    
+    <div class="col-broker">
+    {% if data.advisor.website_url %}
+        {{ data.advisor.location|default('Location not specified') }}
+        <br><small><a href="{{ data.advisor.website_url }}" target="_blank">{{ data.advisor.website_url }}</a></small>
+    {% else %}
+        {{ data.advisor.firm|default('') }}
+        {% if data.advisor.crd is defined and data.advisor.crd %}
+            <br><small>CRD: #{{ data.advisor.crd }}</small>
+        {% endif %}
+    {% endif %}
+</div>
+
+
+    <div class="col-status">
+        {% if data.last_scan_check %}
+            <span class="status-badge scanned timestamp">Last Scan: {{ data.last_scan_check|format_datetime }}</span>
+        {% else %}
+            <span class="status-badge pending">No content scan</span>
+        {% endif %}
+    </div>
+
+    <div class="col-queued">
+        <span class="queued-count" id="queuedCount-{{ advisor_id }}">
+    {{ data.queued_count }}
+</span>
+    </div>
+
+<div class="col-queued">
+    <span class="queued-count" id="fixedCount-{{ advisor_id }}" style="background: #d4edda; color: #155724;">-</span>
+</div>
+    
+    <div class="col-username">
+    <span class="username-badge">{{ data.advisor.added_by_username|default('Unknown') }}</span>
+
+</div>
+
+    <div class="col-actions">
+        <a href="{{ url_for('advisor_details', advisor_id=advisor_id) }}" class="btn btn-primary btn-sm">Details</a>
+        <a href="{{ url_for('remove_advisor', advisor_id=advisor_id) }}" 
+           class="btn btn-danger btn-sm btn-icon" 
+           onclick="return confirm('Are you sure you want to remove this entry and all associated data? This cannot be undone.')"
+           title="Remove entry">
+            🗑️
+        </a>
+    </div>
+</div>
+{% endfor %}
+
+
+</div>
+            </div>
+        {% else %}
+            <div class="empty-dashboard">
+                <div class="empty-icon">🌐</div>
+                <h3>No Advisors Added Yet</h3>
+                <p>Add your first advisor to start monitoring their website</p>
+                <a href="{{ url_for('add_advisor') }}" class="btn btn-primary btn-large">Add First Advisor</a>
+            </div>
+        {% endif %}
+    </div>
+<script>
+
+// Load queued site counts for all advisors
+document.addEventListener('DOMContentLoaded', function() {
+    {% for advisor_id, data in advisor_data.items() %}
+    loadQueuedCount({{ advisor_id }});
+    loadFixedCount({{ advisor_id }}); // Add this line
+    {% endfor %}
+});
+
+
+// 🔄 Update dashboard counts automatically when localStorage changes
+window.addEventListener('storage', function(e) {
+    if (e.key && e.key.startsWith('selectedProfiles_')) {
+        const advisorId = e.key.split('_')[1];
+        loadQueuedCount(advisorId);
+    }
+});
+
+function loadQueuedCount(advisorId) {
+    const scanKey = `selectedProfiles_${advisorId}`;
+    const selectedProfiles = JSON.parse(localStorage.getItem(scanKey) || '[]');
+
+    const countElement = document.getElementById(`queuedCount-${advisorId}`);
+    if (countElement) {
+        countElement.textContent = selectedProfiles.length;
+
+        if (selectedProfiles.length === 0) {
+            countElement.style.background = '#f5f5f5';
+            countElement.style.color = '#999';
+        }
+    }
+}
+
+function loadFixedCount(advisorId) {
+    try {
+        const resolvedMap = JSON.parse(localStorage.getItem(`resolvedIssues:${advisorId}`) || '{}');
+        const fixedCount = Object.keys(resolvedMap).length;
+        
+        const countElement = document.getElementById(`fixedCount-${advisorId}`);
+        if (countElement) {
+            countElement.textContent = fixedCount;
+            if (fixedCount === 0) {
+                countElement.style.background = '#f5f5f5';
+                countElement.style.color = '#999';
+            }
+        }
+    } catch (e) {
+        console.log('Error loading fixed count:', e);
+    }
+}
+
+function convertToUserLocalTime() {
+    // Find all elements with class 'timestamp'
+    const timeElements = document.querySelectorAll('.timestamp');
+    
+    timeElements.forEach(element => {
+        const timeText = element.textContent.trim();
+        if (timeText && timeText !== 'Never' && timeText !== 'Unknown') {
+            try {
+                // Extract the date and time from formats like "12/30/2025 at 2:04 PM"
+                const match = timeText.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+at\s+(\d{1,2}):(\d{2})\s+(AM|PM)/);
+                if (match) {
+                    const [, month, day, year, hour, minute, ampm] = match;
+                    
+                    // Convert to 24-hour format
+                    let hour24 = parseInt(hour);
+                    if (ampm === 'PM' && hour24 !== 12) hour24 += 12;
+                    if (ampm === 'AM' && hour24 === 12) hour24 = 0;
+                    
+                    // FIXED: Create date object without assuming UTC (treats as local server time)
+                    const serverDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hour24.toString().padStart(2, '0')}:${minute}:00`);
+                    
+                    // Convert to user's local time
+                    const localTime = serverDate.toLocaleString('en-US', {
+                        month: '2-digit',
+                        day: '2-digit',
+                        year: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true,
+                        timeZoneName: 'short'
+                    });
+                    
+                    element.textContent = localTime.replace(',', ' at');
+                }
+            } catch (e) {
+                console.log('Error converting time:', e);
+                // Keep original time if conversion fails
+            }
+        }
+    });
+}
+// Run when page loads
+document.addEventListener('DOMContentLoaded', convertToUserLocalTime);
+
+// REPLACE the existing login check JavaScript with this COMPLETE version:
+let loginCheckInterval = null;
+let modalShown = false;
+
+function showLoginModal(platform, message) {  // ← Add message parameter
+    if (modalShown) return;
+    modalShown = true;
+    
+    const modal = document.createElement('div');
+    modal.id = 'loginModal';
+    modal.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+        background: rgba(0,0,0,0.5); z-index: 10000; display: flex; 
+        justify-content: center; align-items: center;
+    `;
+    
+    const displayMessage = message || `Please login to ${platform} manually in the browser tab.`;  // ← Now message is defined
+    modal.innerHTML = `
+        <div style="background: white; padding: 30px; border-radius: 8px; text-align: center; max-width: 400px;">
+            <h2>🔑 ${platform} Action Required</h2>
+            <p>${displayMessage}</p>
+            <p><strong>Click "Continue" when completed.</strong></p>
+            <button onclick="confirmLogin(true)" class="btn btn-primary" style="margin: 10px;">✅ Continue</button>
+            <button onclick="confirmLogin(false)" class="btn btn-secondary" style="margin: 10px;">❌ Cancel</button>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+window.confirmLogin = function(confirmed) {
+    fetch('/confirm_login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({confirmed: confirmed})
+    });
+    
+    const modal = document.getElementById('loginModal');
+    if (modal) {
+        document.body.removeChild(modal);
+    }
+    modalShown = false;
+};
+
+// Platform status tracking - persistent dashboard
+let platformStatuses = JSON.parse(localStorage.getItem('platformStatuses') || '{"Facebook": null, "LinkedIn": null, "Twitter": null}');
+
+document.addEventListener('DOMContentLoaded', function() {
+    let idleCount = 0;
+    displayPlatformStatuses();
+    
+    loginCheckInterval = setInterval(() => {
+        fetch('/check_login_request')
+            .then(r => r.json())
+            .then(data => {
+                if (data.show_modal && !modalShown) {
+                    showLoginModal(data.platform, data.message);
+                    idleCount = 0;
+                } else if (data.bulk_complete) {
+                    // Update to completed status
+                    platformStatuses[data.bulk_complete.platform] = {
+                        status: 'completed',
+                        total_profiles: data.bulk_complete.total_profiles,
+                        profiles_with_new_content: data.bulk_complete.profiles_with_new_content,
+                        timestamp: Date.now()
+                    };
+                    localStorage.setItem('platformStatuses', JSON.stringify(platformStatuses));
+                    displayPlatformStatuses();
+                    idleCount = 0; // Reset idle count to keep polling
+                } else {
+                    idleCount++;
+                    if (idleCount > 1350) {
+                        clearInterval(loginCheckInterval);
+                        loginCheckInterval = null;
+                    }
+                }
+            })
+            .catch(() => {});
+    }, 2000);
+});
+
+function displayPlatformStatuses() {
+    const container = document.getElementById('platform-status');
+    container.innerHTML = '';
+    
+    ['Facebook', 'LinkedIn', 'Twitter'].forEach(platform => {
+        const div = document.createElement('div');
+        const status = platformStatuses[platform];
+        
+        if (!status || status.status === 'not_started') {
+            div.className = 'alert alert-secondary';
+            div.innerHTML = `⏸️ ${platform} refresh not started`;
+        } else if (status.status === 'started') {
+            div.className = 'alert alert-info';
+            div.innerHTML = `⏳ Bulk ${platform} refresh started for ${status.total_profiles} profiles. Check terminal for progress.`;
+        } else if (status.status === 'completed') {
+            const completedTime = new Date(status.timestamp).toLocaleString('en-US', {
+        timeZone: 'America/New_York',
+        month: '2-digit',
+        day: '2-digit', 
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+    });
+            div.className = 'alert alert-success';
+            div.innerHTML = `✅ Bulk ${platform} refresh completed! ${status.total_profiles} profiles processed, ${status.profiles_with_new_content} with new content. <small>(${completedTime} EST)</small>`;
+        }
+        
+        container.appendChild(div);
+    });
+}
+
+// Update status to "started" when refresh button clicked
+document.querySelectorAll('a[href*="refresh_all_"]').forEach(link => {
+    link.addEventListener('click', function() {
+
+        
+        const platform = this.href.includes('facebook') ? 'Facebook' : 
+                         this.href.includes('linkedin') ? 'LinkedIn' : 'Twitter';
+        
+        // Only update THIS platform's status to "started"
+        platformStatuses[platform] = {
+            status: 'started',
+            total_profiles: platformStatuses[platform]?.total_profiles || '?',
+            profiles_with_new_content: 0,
+            timestamp: Date.now()
+        };
+        localStorage.setItem('platformStatuses', JSON.stringify(platformStatuses));
+        displayPlatformStatuses();
+        
+        // Remove any conflicting Flask flash messages
+        document.querySelectorAll('.alert').forEach(alert => {
+            if (alert.textContent.includes('refresh started') && !alert.id) {
+                alert.remove();
+            }
+        });
+    });
+});
+
+
+document.addEventListener('DOMContentLoaded', function () {
+  {% for advisor_id, data in advisor_data.items() %}
+    (function(id, count){
+      const el = document.getElementById('fixedCount-' + id);
+      if (!el) return;
+      el.textContent = count || 0;
+
+      if ((count || 0) === 0) {
+        el.style.background = '#f5f5f5';
+        el.style.color = '#999';
+      } else {
+        el.classList.add('warning');
+      }
+    })({{ advisor_id }}, {{ data.issue_count or 0 }});
+  {% endfor %}
+});
+
+
+window.onload = function () {
+  {% for advisor_id, data in advisor_data.items() %}
+    (function(id, count){
+      const el = document.getElementById('fixedCount-' + id);
+      if (!el) return;
+      el.textContent = count || 0;
+      if ((count || 0) === 0) {
+        el.style.background = '#d4edda';
+        el.style.color = '#155724';
+      } else {
+        el.style.background = '#f8d7da';
+        el.style.color = '#dc3545';
+      }
+    })({{ advisor_id }}, {{ data.issue_count or 0 }});
+  {% endfor %}
+};
+
+
+
+document.addEventListener("DOMContentLoaded", function() {
+  const btn = document.getElementById("retrieveAllFacebook");
+  if (!btn) {
+    console.error("❌ Retrieve button not found in DOM!");
+    return;
+  }
+
+  console.log("✅ Retrieve button found and click handler attached.");
+
+  btn.addEventListener("click", function(e) {
+    e.preventDefault();
+    console.log("⚡ Retrieve All Facebook button clicked.");
+
+    let allQueued = [];
+
+    {% for advisor_id, data in advisor_data.items() %}
+      let profiles_{{ advisor_id }} = JSON.parse(localStorage.getItem("selectedProfiles_{{ advisor_id }}") || "[]");
+      console.log("📊 Advisor {{ advisor_id }} has", profiles_{{ advisor_id }}.length, "profiles queued.");
+      profiles_{{ advisor_id }}.forEach(p => {
+        if (p.platform === "facebook" && p.status !== "monitored") {
+          allQueued.push({advisor_id: {{ advisor_id }}, url: p.url});
+        }
+      });
+    {% endfor %}
+
+    console.log(`📊 Total queued profiles collected: ${allQueued.length}`);
+
+    if (allQueued.length === 0) {
+      alert("⚠️ No queued Facebook profiles found.");
+      console.warn("⚠️ No queued profiles found, aborting.");
+      return;
+    }
+
+    console.log("🚀 Sending queued profiles to backend…");
+
+    fetch("/retrieve_all_facebook", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({profiles: allQueued})
+    })
+    .then(r => r.json())
+    .then(data => {
+      console.log("✅ Backend response:", data);
+      alert(data.message || "Started processing queued profiles");
+    })
+    .catch(err => {
+      console.error("❌ Error sending profiles:", err);
+      alert("Error sending Facebook profiles to backend");
+    });
+  });
+});
+
+
+
+</script>
+</body>
+</html>

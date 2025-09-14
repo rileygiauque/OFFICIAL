@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ advisor[2] }} - Advisor Details</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+
+.queued-sites {
+    margin-top: 30px;
+}
+
+.queued-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.queued-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.queued-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+}
+
+.queued-details h4 {
+    margin: 0;
+    font-size: 14px;
+    color: #333;
+}
+
+.queued-details p {
+    margin: 2px 0 0 0;
+    font-size: 12px;
+    color: #666;
+}
+
+.squiggle-btn {
+    background: #007bff !important;
+    color: white !important;
+    border: none !important;
+    padding: 8px 16px !important;
+    border-radius: 4px !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.squiggle-btn:hover {
+    background: #0056b3 !important;
+}
+
+.avatar-img {
+    border-radius: 50%;
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    border: 2px solid #e9ecef;
+    background-color: #f8f9fa !important; /* Force light background by default */
+    transition: all 0.3s ease;
+    padding: 4px;
+    box-sizing: border-box;
+}
+
+/* Only apply dark background when explicitly needed AND confirmed */
+.avatar-img.needs-dark-bg.confirmed-white {
+    background-color: #2c3e50 !important;
+    border: 3px solid #34495e !important;
+}
+
+/* Add this to your existing CSS */
+.domain-logo {
+    width: 20px;
+    height: 20px;
+    margin-right: 8px;
+    border-radius: 3px;
+}
+
+.domain-logo.needs-dark-bg {
+    background-color: #2c3e50 !important;
+    padding: 2px;
+}
+
+.delete-btn {
+    background: #dc3545 !important;
+    color: white !important;
+    border: none !important;
+    padding: 0.5rem 1rem !important;
+    border-radius: 4px !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    margin-left: 10px !important;
+    height: 40px !important;
+    min-width: 80px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.domain-actions .btn-primary {
+    min-width: 120px !important;
+    height: 40px !important;
+    font-weight: 500 !important;
+    font-size: 14px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    font-weight: bold !important;
+}
+
+.domain-actions button.btn-primary:hover {
+    background: #0056b3 !important;
+}
+
+.avatar-img {
+    border-radius: 50%;
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    border: 2px solid #e9ecef;
+    background-color: #f8f9fa;
+    transition: all 0.3s ease;
+    padding: 4px;
+    box-sizing: border-box;
+}
+
+/* Dark background for white/light logos */
+.avatar-img.needs-dark-bg {
+    background-color: #2c3e50 !important;
+    border: 3px solid #34495e !important;
+}
+
+.avatar-img:hover {
+    transform: scale(1.05);
+    border-color: #007bff;
+}
+
+/* Hide compliance check and content scan date details */
+.last-check {
+    display: none !important;
+}
+
+/* Additional styles for the modal and delete functionality */
+.delete-btn {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+.delete-btn:hover {
+    background: #c82333;
+}
+
+.domain-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.domain-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 15% auto;
+    padding: 20px;
+    border-radius: 8px;
+    width: 400px;
+    text-align: center;
+}
+
+.modal-buttons {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-left: 5px;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+}
+
+.btn-secondary:disabled {
+    background: #adb5bd;
+    cursor: not-allowed;
+}
+
+.form-group {
+    margin-bottom: 15px;
+    text-align: left;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.form-group input[type="url"] {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+/* Styles for the last check indicators */
+.last-check {
+    display: flex;
+    align-items: center;
+    margin: 5px 0;
+    font-size: 12px;
+    color: #666;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 8px;
+    background-color: #28a745; /* Green for success */
+}
+
+.hide-show-btn {
+    background: #6c757d !important;
+    color: white !important;
+    border: none !important;
+    padding: 0.5rem 1rem !important;
+    border-radius: 4px !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    margin-right: 10px !important;
+    height: 40px !important;
+    min-width: 100px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.hide-show-btn:hover {
+    background: #5a6268 !important;
+}
+
+.hide-show-btn.hidden-state {
+    background: #28a745 !important;
+}
+
+.hide-show-btn.hidden-state:hover {
+    background: #218838 !important;
+}
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <h2>Firm Details</h2>
+            <div class="nav-actions">
+                <a href="{{ url_for('add_link', advisor_id=advisor[0]) }}" class="btn btn-secondary">Add Site</a>
+                
+                <a href="{{ url_for('dashboard') }}" class="btn btn-outline">Back to Dashboard</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Combined Advisor Profile and Stats -->
+        <div class="advisor-profile-combined">
+    <div class="profile-section">
+        <div class="profile-avatar">
+    {% set domain = advisor[4].replace('https://', '').replace('http://', '').split('/')[0] %}
+    <img id="profile-avatar" 
+     src="https://logo.clearbit.com/{{ domain }}" 
+     alt="{{ advisor[2] }}" 
+     class="avatar-img high-res-logo"
+     onerror="fallbackLogo(this, '{{ domain }}', '{{ advisor[2]|urlencode }}')">
+</div>
+        <div class="profile-info">
+            <h1>{{ advisor[7] }}</h1>
+            <div class="info-details">
+                <div class="info-item">
+                    🏢 <strong>Broker Dealer:</strong> {{ advisor[8] or 'Not specified' }}
+                </div>
+                <div class="info-item">
+                    🌐 <strong>Website:</strong> 
+                    <a href="{{ advisor[4] }}" target="_blank" class="website-link">{{ advisor[4] }}</a>
+                </div>
+            </div>
+        </div>
+    </div>
+            <div class="stats-section">
+                <div class="stat-item">
+                    <span class="stat-number">{{ grouped_pages|length }}</span>
+                    <span class="stat-label">Domains</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">
+                        {% set total_pages = [] %}
+                        {% for domain, data in grouped_pages.items() %}
+                            {% for page in data.pages %}
+                                {% if total_pages.append(1) %}{% endif %}
+                            {% endfor %}
+                        {% endfor %}
+                        {{ total_pages|length }}
+                    </span>
+                    <span class="stat-label">Total Pages</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">
+                        {% set total_changes = [] %}
+                        {% for domain, data in grouped_pages.items() %}
+                            {% for change in data.changes %}
+                                {% if total_changes.append(1) %}{% endif %}
+                            {% endfor %}
+                        {% endfor %}
+                        {{ total_changes|length }}
+                    </span>
+                    <span class="stat-label">Changes</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number" style="color: #dc3545;">
+                        {% set total_issues = [] %}
+                        {% for domain, data in grouped_pages.items() %}
+                            {% for issue in data.issues %}
+                                {% if total_issues.append(1) %}{% endif %}
+                            {% endfor %}
+                        {% endfor %}
+                        {{ total_issues|length }}
+                    </span>
+                    <span class="stat-label">Issues</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Website Domains -->
+        {% if grouped_pages %}
+            <div class="domains-list">
+                <h2>Monitored Websites</h2>
+                
+                {% for root_domain, domain_data in grouped_pages.items() %}
+                <div class="domain-card">
+                    <div class="domain-header">
+                        <div class="domain-info">
+                            {% if domain_data.pages %}
+    {% set first_page = domain_data.pages[0] %}
+    <h3>
+{% if 'facebook.com' in domain_data.domain %}
+    <img src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/facebook.svg" style="width: 20px; height: 20px; margin-right: 8px; filter: invert(24%) sepia(94%) saturate(4893%) hue-rotate(213deg) brightness(97%) contrast(105%);">
+{% elif 'x.com' in domain_data.domain or 'twitter.com' in domain_data.domain %}
+    <img src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/x.svg" style="width: 20px; height: 20px; margin-right: 8px;">
+{% elif 'linkedin.com' in domain_data.domain %}
+    <img src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/linkedin.svg" style="width: 20px; height: 20px; margin-right: 8px; filter: invert(27%) sepia(94%) saturate(1529%) hue-rotate(187deg) brightness(103%) contrast(98%);">
+{% elif 'youtube.com' in domain_data.domain or 'youtu.be' in domain_data.domain %}
+  <img src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/youtube.svg"
+       style="width:20px;height:20px;margin-right:8px; filter: invert(18%) sepia(95%) saturate(7471%) hue-rotate(4deg) brightness(103%) contrast(107%);" >
+
+{% else %}
+    {% set display_domain = domain_data.domain.replace('https://', '').replace('http://', '').split('/')[0] %}
+    <img src="https://logo.clearbit.com/{{ display_domain }}" 
+         class="domain-logo"
+         onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
+    <span style="display: none;">🌐</span>
+{% endif %}
+{% if 'facebook.com' in domain_data.domain %}
+    Facebook
+{% elif 'x.com' in domain_data.domain or 'twitter.com' in domain_data.domain %}
+    Twitter
+{% elif 'linkedin.com' in domain_data.domain %}
+    LinkedIn
+{% elif 'youtube.com' in domain_data.domain or 'youtu.be' in domain_data.domain %}
+  YouTube
+{% else %}
+    {{ first_page[1] if first_page[1] else domain_data.domain }}
+{% endif %}
+</h3>
+    <div style="margin-top: 5px; margin-bottom: 10px;">
+    <a href="{% if 'facebook.com' in domain_data.domain %}https://facebook.com{% elif 'x.com' in domain_data.domain or 'twitter.com' in domain_data.domain %}https://x.com{% elif 'linkedin.com' in domain_data.domain %}https://linkedin.com{% else %}{{ first_page[0] }}{% endif %}" target="_blank" style="color: #666; font-size: 14px; text-decoration: none;">{% if 'facebook.com' in domain_data.domain %}facebook.com{% elif 'x.com' in domain_data.domain or 'twitter.com' in domain_data.domain %}x.com{% elif 'linkedin.com' in domain_data.domain %}linkedin.com{% else %}{% set display_domain = first_page[0].replace('https://', '').replace('http://', '').split('/')[0] %}{{ display_domain }}{% endif %}</a>
+</div>
+{% else %}
+    <h3>🌐 {{ domain_data.domain }}</h3>
+{% endif %}
+                            <div class="domain-stats">
+                                <span class="stat-badge">{{ domain_data.pages|length }} pages</span>
+                                <span class="stat-badge changes">{{ domain_data.changes|length }} changes</span>
+                                {% if domain_data.issues|length > 0 %}
+                                    <span class="stat-badge issues">{{ domain_data.issues|length }} issues</span>
+                                {% else %}
+                                    <span class="stat-badge clean">✓ Clean</span>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Last Compliance Check -->
+                            {% if domain_data.last_compliance_check %}
+                                <div class="last-check">
+                                    <span class="status-dot"></span>
+                                    Last Compliance Check: <span class="timestamp">{{ domain_data.last_compliance_check|format_datetime }}</span>
+                                </div>
+                            {% else %}
+                                <div class="last-check">
+                                    <span class="status-dot" style="background-color: #ffc107;"></span>
+                                    No compliance check performed
+                                </div>
+                            {% endif %}
+                            
+                            <!-- Last Scan Check -->
+                            {% if domain_data.last_scan_check %}
+                                <div class="last-check">
+                                    <span class="status-dot" style="background-color: #28a745;"></span>
+                                    Last Scan: <span class="timestamp">{{ domain_data.last_scan_check|format_datetime }}</span>
+                                </div>
+                            {% else %}
+                                <div class="last-check">
+                                    <span class="status-dot" style="background-color: #ffc107;"></span>
+                                    No content scan performed
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="domain-actions">
+    {% if domain_data.pages|length == 1 or ('x.com' not in domain_data.domain and 'twitter.com' not in domain_data.domain and 'linkedin.com' not in domain_data.domain and 'facebook.com' not in domain_data.domain and 'instagram.com' not in domain_data.domain and 'youtube.com' not in domain_data.domain) %}
+    <button onclick="toggleVisibility('{{ domain_data.pages[0][0] if domain_data.pages else domain_data.domain }}')" class="hide-show-btn" id="visibilityBtn-{{ (domain_data.pages[0][0] if domain_data.pages else domain_data.domain)|replace('.', '-')|replace('/', '-')|replace(':', '-')|replace('?', '-')|replace('=', '-')|replace('%', '-') }}">
+        Hide
+    </button>
+    {% endif %}
+    
+    {% if 'facebook.com' in domain_data.domain or 'x.com' in domain_data.domain or 'twitter.com' in domain_data.domain or 'linkedin.com' in domain_data.domain or 'youtube.com' in domain_data.domain or 'youtu.be' in domain_data.domain %}
+        <button onclick="togglePagesDropdown({{ loop.index }})" class="btn btn-primary" id="toggleBtn-{{ loop.index }}">
+            View Details
+        </button>
+    {% else %}
+        <a href="{{ url_for('domain_details', advisor_id=advisor[0], domain=domain_data.domain) }}" class="btn btn-primary">
+            View Details
+        </a>
+    {% endif %}
+    
+    <button onclick="confirmDeleteWebsite('{{ domain_data.domain }}')" class="delete-btn">
+        🗑️ Delete
+    </button>
+</div>
+                    </div>
+
+<!-- Pages Dropdown (only for social media with multiple pages) -->
+{% if ('facebook.com' in domain_data.domain or 'x.com' in domain_data.domain or 'twitter.com' in domain_data.domain or 'linkedin.com' in domain_data.domain or 'youtube.com' in domain_data.domain or 'youtu.be' in domain_data.domain) and domain_data.pages|length > 0 %}
+<div class="pages-dropdown" id="pagesDropdown-{{ loop.index }}" style="display: none; margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+    {% for page in domain_data.pages %}
+    <div class="page-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border: 1px solid #dee2e6; border-radius: 6px; margin-bottom: 10px; background: white;">
+    <div style="flex: 1;">
+        <h4 style="margin: 0; font-size: 14px; color: #333;" id="pageTitle-{{ loop.index0 }}">{{ page[1] or 'Untitled Page' }}</h4>
+        <input type="text" style="display: none; margin: 0; font-size: 14px; padding: 4px; border: 1px solid #ccc; border-radius: 3px; width: 100%;" id="editTitle-{{ loop.index0 }}" value="{{ page[1] or 'Untitled Page' }}">
+        <a href="{{ page[0] }}" target="_blank" style="font-size: 12px; color: #666; text-decoration: none;">{{ page[0] }}</a>
+    </div>
+    <div style="display: flex; gap: 8px;">
+<button onclick="toggleVisibility('{{ page[0] }}')" class="hide-show-btn" id="visibilityBtn-{{ (page[0])|replace('.', '-')|replace('/', '-')|replace(':', '-')|replace('?', '-')|replace('=', '-')|replace('%', '-') }}" style="min-width: 60px !important; height: 32px !important; font-size: 11px !important; padding: 4px 8px !important;">
+        Show
+    </button>
+        <button onclick="editPageTitle({{ loop.index0 }}, '{{ page[0] }}')" class="btn btn-sm" style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 12px;" id="editBtn-{{ loop.index0 }}">
+            ✏️
+        </button>
+        <a href="{{ url_for('domain_details', advisor_id=advisor[0], domain=domain_data.domain) }}?specific_page={{ page[0]|urlencode }}" class="btn btn-primary btn-sm">
+            View Details
+        </a>
+        <button onclick="confirmDeletePage('{{ page[0] }}', '{{ page[1] or 'Untitled Page' }}')" class="btn btn-sm" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 12px;">
+            🗑️
+        </button>
+    </div>
+</div>
+    {% endfor %}
+</div>
+{% endif %}
+
+                    <!-- Collapsible Details -->
+                    <div class="domain-details" id="domain-{{ loop.index }}" style="display: none;">
+                        {% if domain_data.changes or domain_data.issues %}
+                            
+                            <!-- Recent Changes -->
+                            {% if domain_data.changes %}
+                            <div class="section">
+                                <h4>📝 Recent Changes ({{ domain_data.changes|length }})</h4>
+                                <div class="changes-list">
+                                    {% for change in domain_data.changes[:3] %}
+                                    <div class="change-item">
+                                        <div class="change-type {{ change[2] }}">{{ change[2].title() }}</div>
+                                        <div class="change-content">
+                                            <p>{{ change[6] or 'Website content changed' }}</p>
+                                            <div class="change-time timestamp">{{ change[5]|format_datetime }}</div>
+                                        </div>
+                                        <a href="{{ url_for('change_details', change_id=change[0]) }}" class="btn btn-outline btn-sm">View</a>
+                                    </div>
+                                    {% endfor %}
+                                    {% if domain_data.changes|length > 3 %}
+                                        <div class="more-changes">
+                                            ... and {{ domain_data.changes|length - 3 }} more changes
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Compliance Issues -->
+                            {% if domain_data.issues %}
+                            <div class="section">
+                                <h4>⚠️ Compliance Issues ({{ domain_data.issues|length }})</h4>
+                                <div class="issues-list">
+                                    {% for issue in domain_data.issues[:2] %}
+                                    <div class="issue-item">
+                                        <div class="issue-content">
+                                            <div class="flagged-text">
+                                                "{{ issue[3][:100] }}{% if issue[3]|length > 100 %}...{% endif %}"
+                                            </div>
+                                            {% if issue[4] %}
+                                            <div class="suggested-text">
+                                                💡 "{{ issue[4][:100] }}{% if issue[4]|length > 100 %}...{% endif %}"
+                                            </div>
+                                            {% endif %}
+                                            <div class="issue-time">Detected: <span class="timestamp">{{ issue[7]|format_datetime }}</span></div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                    {% if domain_data.issues|length > 2 %}
+                                        <div class="more-issues">
+                                            ... and {{ domain_data.issues|length - 2 }} more issues
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+
+                        {% else %}
+                            <div class="no-activity">
+                                <p>✅ No changes or issues detected yet.</p>
+                                <p>Click "Scan Page" to check for content changes.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <h3>📡 No Websites Found</h3>
+                <p>This advisor hasn't been scanned yet.</p>
+                <a href="{{ url_for('force_scan', advisor_id=advisor[0]) }}" class="btn btn-primary">Start Scanning</a>
+            </div>
+        {% endif %}
+    
+
+    <!-- Queued Sites Section -->
+        <div class="queued-sites">
+            <h2>Queued Sites</h2>
+            <div id="queuedSitesList">
+                <!-- Queued sites will be loaded here -->
+            </div>
+        </div>
+
+
+    <!-- Add Site Modal -->
+    <div id="addSiteModal" class="modal">
+        <div class="modal-content">
+            <h3>🌐 Add New Website</h3>
+            <div class="form-group">
+                <label for="newWebsiteUrl">Website URL:</label>
+                <input type="url" id="newWebsiteUrl" placeholder="https://example.com" required>
+            </div>
+            <div class="modal-buttons">
+                <button onclick="addWebsite()" class="btn btn-primary">Add Website</button>
+                <button onclick="closeAddSiteModal()" class="btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="modal">
+        <div class="modal-content">
+            <h3>🗑️ Delete Website</h3>
+            <p>Are you sure you want to delete <strong id="deleteDomainName"></strong>?</p>
+            <p style="color: #dc3545; font-size: 14px;">This will remove all pages, changes, and compliance issues for this website.</p>
+            <div class="modal-buttons">
+                <button onclick="deleteWebsite()" class="btn-danger">Yes, Delete</button>
+                <button onclick="closeDeleteModal()" class="btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+
+<script>
+
+
+
+function initializeBulkAdvisorProfiles(advisorId) {
+    return fetch(`/api/get-advisor-profiles/${advisorId}`)
+        .then(response => response.json())
+        .then(data => {
+            const key = `selectedProfiles_${advisorId}`;
+            if (data.success && data.profiles && data.profiles.length > 0) {
+                localStorage.setItem(key, JSON.stringify(data.profiles));
+                localStorage.setItem('currentScan', JSON.stringify({
+                    advisor_id: advisorId,
+                    firm_name: data.advisor_name,
+                    timestamp: Date.now()
+                }));
+            } else if (!localStorage.getItem(key)) {
+                localStorage.setItem(key, '[]');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading advisor profiles:', error);
+            const key = `selectedProfiles_${advisorId}`;
+            if (!localStorage.getItem(key)) {
+                localStorage.setItem(key, '[]');
+            }
+        });
+}
+
+
+
+function removeFromLocalStorage(urlsToRemove) {
+    console.log('🔧 removeFromLocalStorage called with:', urlsToRemove);
+    
+    const currentScan = JSON.parse(localStorage.getItem('currentScan') || 'null');
+    if (!currentScan || !currentScan.advisor_id) {
+        console.log('🔧 No currentScan found, returning early');
+        return;
+    }
+    
+    // Remove from advisor-specific profiles
+    const storageKey = `selectedProfiles_${currentScan.advisor_id}`;
+    let profiles = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    
+    // Also check for case variations of URLs
+    const urlVariants = [];
+    urlsToRemove.forEach(url => {
+        urlVariants.push(url);
+        urlVariants.push(url.toLowerCase());
+        urlVariants.push(url.toUpperCase());
+    });
+    
+    profiles = profiles.filter(profile => !urlVariants.includes(profile.url));
+    localStorage.setItem(storageKey, JSON.stringify(profiles));
+    
+    // ALSO remove from general selectedProfiles key
+    let generalProfiles = JSON.parse(localStorage.getItem('selectedProfiles') || '[]');
+    generalProfiles = generalProfiles.filter(profile => !urlVariants.includes(profile.url));
+    localStorage.setItem('selectedProfiles', JSON.stringify(generalProfiles));
+    
+    // Clean up visibility states
+    const scanSessionId = localStorage.getItem('currentScanSession') || 'default';
+    urlVariants.forEach(url => {
+        const domain = (() => {
+            try { return new URL(url).hostname; } catch { return url; }
+        })();
+        
+        const keysToRemove = [
+            `scan-${scanSessionId}-visibility-${url}`,
+            `scan-${scanSessionId}-visibility-${domain}`,
+            `scan-${scanSessionId}-visibility-www.${domain}`,
+            `scan-${scanSessionId}-visibility-${domain.replace('www.', '')}`
+        ];
+        
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+    });
+    
+    console.log('🔧 removeFromLocalStorage completed');
+}
+
+function notifyDashboardQueuedUpdate(advisorId) {
+    // Fire a custom event so dashboard can refresh immediately
+    window.dispatchEvent(new CustomEvent('queuedSitesUpdated', {
+        detail: { advisorId: advisorId }
+    }));
+}
+
+// Load queued sites from localStorage
+async function loadQueuedSites() {
+    const pageAdvisorId = {{ advisor[0] }};
+    const scanKey = `selectedProfiles_${pageAdvisorId}`;
+    
+    const selectedProfiles = JSON.parse(localStorage.getItem(scanKey) || '[]');
+    
+    // Get existing URLs from the database (from the Jinja template data)
+    const existingUrls = [
+        {% for domain, data in grouped_pages.items() %}
+            {% for page in data.pages %}
+                '{{ page[0] }}',
+            {% endfor %}
+        {% endfor %}
+    ];
+    
+    console.log('🔧 LOAD QUEUED SITES DEBUG:');
+    console.log('- selectedProfiles count:', selectedProfiles.length);
+    console.log('- existingUrls from database:', existingUrls);
+    
+    // Only show profiles that aren't already monitored in the database
+    const socialProfiles = selectedProfiles.filter(profile => {
+        const isInDatabase = existingUrls.some(existingUrl => {
+            // Normalize URLs for comparison
+            const normalizeUrl = (url) => {
+                return url.toLowerCase()
+                    .replace(/^https?:\/\//, '')
+                    .replace(/^www\./, '')
+                    .replace(/\/$/, '');
+            };
+            
+            return normalizeUrl(existingUrl) === normalizeUrl(profile.url);
+        });
+        
+        console.log(`- Profile ${profile.url}: inDatabase=${isInDatabase}`);
+        return !isInDatabase;
+    });
+
+    console.log('- socialProfiles after filtering:', socialProfiles.length);
+
+    const scanSessionId_q = localStorage.getItem('currentScanSession') || 'default';
+    localStorage.setItem('currentScanSession', scanSessionId_q);
+
+    socialProfiles.forEach(p => {
+        const k = `scan-${scanSessionId_q}-visibility-${p.url}`;
+        if (!localStorage.getItem(k)) localStorage.setItem(k, 'hidden');
+    });
+    
+    const queuedContainer = document.getElementById('queuedSitesList');
+    
+    if (socialProfiles.length === 0) {
+        queuedContainer.innerHTML = '<p style="color: #666; font-style: italic;">No queued social media sites</p>';
+        return;
+    }
+    
+    const platformIcons = {
+        linkedin: 'https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/linkedin.svg',
+        facebook: 'https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/facebook.svg', 
+        twitter: 'https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/x.svg',
+        youtube: 'https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/youtube.svg',
+	yt:       'https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/youtube.svg'
+    };
+    
+const labelFor = (p) => {
+  p = (p || '').toLowerCase();
+  return p === 'twitter' ? 'X/Twitter' : (p ? p[0].toUpperCase() + p.slice(1) : 'Website');
+};
+
+
+    queuedContainer.innerHTML = socialProfiles.map((profile, index) => `
+        <div class="queued-item">
+            <div class="queued-info">
+                <img src="${platformIcons[profile.platform] || 'https://via.placeholder.com/24'}" 
+                     alt="${profile.platform}" class="queued-icon"
+                     style="filter: ${profile.platform === 'linkedin' ? 'invert(27%) sepia(94%) saturate(1529%) hue-rotate(187deg) brightness(103%) contrast(98%)' : 
+                                    profile.platform === 'facebook' ? 'invert(24%) sepia(94%) saturate(4893%) hue-rotate(213deg) brightness(97%) contrast(105%)' :
+                                    profile.platform === 'youtube' ? 'invert(18%) sepia(95%) saturate(7471%) hue-rotate(4deg) brightness(103%) contrast(107%)' : 'none'};">
+                <div class="queued-details">
+                    <h4>${labelFor(profile.platform)}</h4>
+                    <p>${profile.url}</p>
+                </div>
+            </div>
+            <button onclick="addQueuedSite('${(profile.url || '').replace(/'/g, "&apos;")}',
+                               '${(profile.name || profile.title || "Untitled").replace(/'/g, "&apos;")}',
+                               ${index})" class="squiggle-btn">
+
+                ∿ Add Site
+            </button>
+        </div>
+    `).join('');
+
+    // 🔔 Notify dashboard after queued sites update
+    notifyDashboardQueuedUpdate({{ advisor[0] }});
+}
+
+// Add queued site function
+function addQueuedSite(url, title, index) {
+    // Store the index so we know which item to remove after successful addition
+    window.queuedItemToRemove = index;
+    
+    // Pre-fill the modal with the queued site data
+    document.getElementById('newWebsiteUrl').value = url;
+    
+    // Show the modal
+    document.getElementById('addSiteModal').style.display = 'block';
+    
+    // Focus on the URL field (which is now pre-filled)
+    document.getElementById('newWebsiteUrl').focus();
+    document.getElementById('newWebsiteUrl').select();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadQueuedSites();
+
+});
+
+function toggleVisibility(target) {
+
+console.log('🔧 TOGGLE VISIBILITY DEBUG:');
+  console.log('- target parameter:', target);
+  console.log('- typeof target:', typeof target);
+  
+  // Log what localStorage keys are being created
+  const scanSessionId = localStorage.getItem('currentScanSession') || 'default';
+  const finalKey = `scan-${scanSessionId}-visibility-${target}`;
+  console.log('- localStorage key that will be created:', finalKey);
+  
+  // Log ALL existing visibility keys
+  console.log('- ALL current visibility keys in localStorage:');
+  Object.keys(localStorage).filter(key => key.includes('visibility')).forEach(key => {
+    console.log(`  ${key}: ${localStorage.getItem(key)}`);
+  });
+
+  console.log('🔧 TOGGLE VISIBILITY CALLED:');
+  console.log('- Raw target:', target);
+
+  // target can be a full URL or a bare domain
+  const isUrl = /^https?:\/\//i.test(target);
+  const rawKey = String(target); // keep exactly what onclick passed (e.g., 'www.facebook.com')
+const domainNormalized = isUrl ? new URL(target).hostname.replace(/^www\./,'')
+                               : rawKey.replace(/^https?:\/\/|^www\./g,'');
+
+  
+  localStorage.setItem('currentScanSession', scanSessionId);
+
+  // use URL when available to avoid collisions (e.g., multiple youtube pages)
+  const keyId = target;  // Use the exact target (URL or domain) passed to the function
+
+  console.log('- isUrl:', isUrl);
+  console.log('- keyId (storage key):', keyId);
+  console.log('- Final localStorage key:', `scan-${scanSessionId}-visibility-${keyId}`);
+
+
+  // Button UI (if present)
+  const btnId = 'visibilityBtn-' + rawKey.replace(/\./g, '-').replace(/\//g, '-').replace(/:/g, '-').replace(/\?/g, '-').replace(/=/g, '-').replace(/%/g, '-');
+
+  const button = document.getElementById(btnId);
+  const wasHidden = button ? button.classList.contains('hidden-state') : true;
+
+  // Toggle UI
+  if (button) {
+    if (wasHidden) { button.classList.remove('hidden-state'); button.textContent = 'Hide'; }
+    else           { button.classList.add('hidden-state');   button.textContent = 'Show'; }
+  }
+
+  // Persist
+  const newState = wasHidden ? 'visible' : 'hidden';
+  localStorage.setItem(`scan-${scanSessionId}-visibility-${keyId}`, newState);
+
+  // Notify new.html (send URL when we have it; falls back to domain)
+  window.dispatchEvent(new CustomEvent('profileVisibilityChanged', {
+  detail: { url: isUrl ? target : undefined, domain: domainNormalized, visible: !wasHidden }
+}));
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const hideShowButtons = document.querySelectorAll('.hide-show-btn');
+    let scanSessionId = localStorage.getItem('currentScanSession');
+    
+    // Handle null scan session
+    if (!scanSessionId) {
+        scanSessionId = 'default';
+        localStorage.setItem('currentScanSession', scanSessionId);
+    }
+    
+    hideShowButtons.forEach(button => {
+        const onclickAttr = button.getAttribute('onclick');
+        const domainMatch = onclickAttr.match(/toggleVisibility\('([^']+)'\)/);
+        const keyId = domainMatch ? domainMatch[1] : '';
+
+        const visibilityKey = `scan-${scanSessionId}-visibility-${keyId}`;
+        const storedVisibility = localStorage.getItem(visibilityKey);
+        
+        // ✅ FIXED: Set default to hidden and ensure it's stored
+        if (storedVisibility === null || storedVisibility === undefined) {
+            button.classList.add('hidden-state');
+            button.textContent = 'Show';
+            localStorage.setItem(visibilityKey, 'hidden');
+        } else {
+            // Use stored preference
+            if (storedVisibility === 'hidden') {
+                button.classList.add('hidden-state');
+                button.textContent = 'Show';
+            } else {
+                button.classList.remove('hidden-state');
+                button.textContent = 'Hide';
+            }
+        }
+    });
+    
+    // ✅ ADD: Also set default states for social media profiles in localStorage
+    const currentScan = JSON.parse(localStorage.getItem('currentScan') || 'null');
+    if (currentScan && currentScan.advisor_id) {
+        const selectedProfiles = JSON.parse(localStorage.getItem(`selectedProfiles_${currentScan.advisor_id}`) || '[]');
+        
+        selectedProfiles.forEach(profile => {
+            const domain = (() => {
+                try { return new URL(profile.url).hostname; } 
+                catch { return profile.url; }
+            })();
+            
+            // Set default visibility states for social profiles if not already set
+            const urlKey = `scan-${scanSessionId}-visibility-${profile.url}`;
+            const domainKey = `scan-${scanSessionId}-visibility-${domain}`;
+            
+            if (!localStorage.getItem(urlKey)) {
+                localStorage.setItem(urlKey, 'hidden');
+            }
+            if (!localStorage.getItem(domainKey)) {
+                localStorage.setItem(domainKey, 'hidden');
+            }
+        });
+    }
+});
+
+function handleProfileImageError(img, domain, advisorName) {
+    console.log('Image error for:', domain);
+    fallbackLogo(img, domain, advisorName);
+}
+
+function fallbackLogo(img, domain, advisorName) {
+    const alternatives = [
+        `https://unavatar.io/${domain}`,
+        `https://www.google.com/s2/favicons?domain=${domain}&sz=128`
+    ];
+    
+    let currentIndex = 0;
+    
+    function tryNext() {
+        if (currentIndex < alternatives.length) {
+            const newSrc = alternatives[currentIndex];
+            currentIndex++;
+            
+            const testImg = new Image();
+            testImg.onload = function() {
+                img.src = newSrc;
+                // Re-analyze the new image
+               
+            };
+            testImg.onerror = tryNext;
+            testImg.src = newSrc;
+        } else {
+            img.src = generateInitialsImage(advisorName);
+        }
+    }
+    
+    tryNext();
+}
+
+function generateInitialsImage(name) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 80;
+    canvas.height = 80;
+    
+    ctx.fillStyle = '#007bff';
+    ctx.fillRect(0, 0, 80, 80);
+    
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 24px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    const initials = name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
+    ctx.fillText(initials, 40, 40);
+    
+    return canvas.toDataURL();
+}
+
+// All your other existing functions...
+let domainToDelete = '';
+const advisorId = {{ advisor[0] }};
+
+function editPageTitle(index, pageUrl) {
+    const titleElement = document.getElementById('pageTitle-' + index);
+    const inputElement = document.getElementById('editTitle-' + index);
+    const buttonElement = document.getElementById('editBtn-' + index);
+    
+    if (titleElement.style.display === 'none') {
+        savePageTitle(index, pageUrl, inputElement.value);
+    } else {
+        titleElement.style.display = 'none';
+        inputElement.style.display = 'block';
+        inputElement.focus();
+        buttonElement.innerHTML = '💾';
+        buttonElement.style.background = '#007bff';
+    }
+}
+
+async function savePageTitle(index, pageUrl, newTitle) {
+    try {
+        const response = await fetch(`/update_page_title/${advisorId}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({page_url: pageUrl, new_title: newTitle})
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            const titleElement = document.getElementById('pageTitle-' + index);
+            const inputElement = document.getElementById('editTitle-' + index);
+            const buttonElement = document.getElementById('editBtn-' + index);
+            
+            titleElement.textContent = newTitle;
+            titleElement.style.display = 'block';
+            inputElement.style.display = 'none';
+            buttonElement.innerHTML = '✏️';
+            buttonElement.style.background = '#28a745';
+            
+            alert('✅ Title updated successfully!');
+        } else {
+            alert(`❌ Error: ${result.error}`);
+        }
+    } catch (error) {
+        console.error('Error updating title:', error);
+        alert('❌ Error updating title');
+    }
+}
+
+function confirmDeletePage(pageUrl, pageTitle) {
+    if (confirm(`Are you sure you want to delete "${pageTitle}"?\n\nURL: ${pageUrl}`)) {
+        deletePage(pageUrl);
+    }
+}
+
+async function deletePage(pageUrl) {
+    console.log('🔧 DELETE PAGE called with:', pageUrl); // ADD THIS LINE
+    
+    try {
+        const response = await fetch(`/delete_page/${advisorId}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({page_url: pageUrl})
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Remove from localStorage
+            console.log('🔧 About to remove from localStorage:', [pageUrl]); // ADD THIS LINE
+            removeFromLocalStorage([pageUrl]);
+            
+            alert(`✅ ${result.message}`);
+            location.reload();
+        } else {
+            alert(`❌ Error: ${result.error}`);
+        }
+    } catch (error) {
+        console.error('Error deleting page:', error);
+        alert('❌ Error deleting page');
+    }
+}
+
+function togglePagesDropdown(index) {
+    const dropdown = document.getElementById('pagesDropdown-' + index);
+    const button = document.getElementById('toggleBtn-' + index);
+    const isVisible = dropdown.style.display !== 'none';
+    
+    dropdown.style.display = isVisible ? 'none' : 'block';
+    button.textContent = isVisible ?
+        button.textContent.replace('Hide Pages', 'View Pages') : 
+        button.textContent.replace('View Pages', 'Hide Pages');
+}
+
+function convertToUserLocalTime() {
+    const timeElements = document.querySelectorAll('.timestamp');
+    
+    timeElements.forEach(element => {
+        const timeText = element.textContent.trim();
+        if (timeText && timeText !== 'Never' && timeText !== 'Unknown') {
+            try {
+                const match = timeText.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+at\s+(\d{1,2}):(\d{2})\s+(AM|PM)/);
+                if (match) {
+                    const [, month, day, year, hour, minute, ampm] = match;
+                    
+                    let hour24 = parseInt(hour);
+                    if (ampm === 'PM' && hour24 !== 12) hour24 += 12;
+                    if (ampm === 'AM' && hour24 === 12) hour24 = 0;
+                    
+                    const serverDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hour24.toString().padStart(2, '0')}:${minute}:00`);
+                    
+                    const localTime = serverDate.toLocaleString('en-US', {
+                        month: '2-digit',
+                        day: '2-digit',
+                        year: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true,
+                        timeZoneName: 'short'
+                    });
+                    
+                    element.textContent = localTime.replace(',', ' at');
+                }
+            } catch (e) {
+                console.log('Error converting time:', e);
+            }
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', convertToUserLocalTime);
+
+// Auto-detect white logos and add dark background
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Checking for white logos...');
+    
+    // Check main avatar
+    const avatarImg = document.querySelector('.avatar-img');
+    if (avatarImg) {
+        console.log('Found avatar:', avatarImg.src);
+        
+        const whiteLogoDomains = ['blueoxadvisors.com'];
+        
+        const domain = avatarImg.src.includes('logo.clearbit.com') ? 
+            avatarImg.src.replace('https://logo.clearbit.com/', '') : 
+            new URL(avatarImg.src).hostname;
+        
+        if (whiteLogoDomains.some(whiteDomain => domain.includes(whiteDomain))) {
+            console.log('✅ Adding dark background for avatar');
+            avatarImg.classList.add('needs-dark-bg');
+        }
+    }
+    
+    // Also check domain logos in the domain cards
+    const domainLogos = document.querySelectorAll('.domain-logo');
+    domainLogos.forEach((img, index) => {
+        console.log(`Checking domain logo ${index + 1}:`, img.src);
+        
+        const whiteLogoDomains = ['blueoxadvisors.com'];
+        
+        const domain = img.src.includes('logo.clearbit.com') ? 
+            img.src.replace('https://logo.clearbit.com/', '') : 
+            new URL(img.src).hostname;
+        
+        if (whiteLogoDomains.some(whiteDomain => domain.includes(whiteDomain))) {
+            console.log('✅ Adding dark background for domain logo');
+            img.classList.add('needs-dark-bg');
+        }
+    });
+});
+function showAddSiteModal() {
+    document.getElementById('addSiteModal').style.display = 'block';
+    document.getElementById('newWebsiteUrl').focus();
+}
+
+function closeAddSiteModal() {
+    document.getElementById('addSiteModal').style.display = 'none';
+    document.getElementById('newWebsiteUrl').value = '';
+}
+
+function toggleDomain(index) {
+    const details = document.getElementById('domain-' + index);
+    const isVisible = details.style.display !== 'none';
+    details.style.display = isVisible ? 'none' : 'block';
+    
+    const button = event.target;
+    button.textContent = isVisible ? '📋 View Details' : '🔼 Hide Details';
+}
+
+async function addWebsite() {
+    const input = document.getElementById('newWebsiteUrl');
+    const websiteUrl = input.value.trim();
+    console.log("🔥 ADDWEBSITE submitting:", websiteUrl);
+
+    // Start login checking only for LinkedIn
+    if (websiteUrl.includes('linkedin.com')) {
+        if (!loginCheckInterval) {
+            loginCheckInterval = setInterval(() => {
+                fetch('/check_login_request')
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.show_modal && !modalShown) {
+                            showLoginModal(data.platform, data.message);
+                        }
+                    })
+                    .catch(() => {});
+            }, 2000);
+        }
+    }
+    
+    if (!websiteUrl) {
+        alert('Please enter a website URL');
+        return;
+    }
+    
+    const button = event.target;
+    const originalText = button.innerHTML;
+    
+    try {
+        button.innerHTML = '⏳ Adding...';
+        button.disabled = true;
+        
+        // Check if this URL was added via "Add Page" modal
+        const pageAdvisorId = {{ advisor[0] }};
+        const scanKey = `selectedProfiles_${pageAdvisorId}`;
+        let selectedProfiles = JSON.parse(localStorage.getItem(scanKey) || '[]');
+        
+        const existingProfile = selectedProfiles.find(profile => 
+            profile.url.toLowerCase() === websiteUrl.toLowerCase()
+        );
+        
+        console.log('🔥 Found existing profile in localStorage:', existingProfile);
+        
+        const response = await fetch(`/add_site/${advisorId}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: `page_url=${encodeURIComponent(websiteUrl)}&page_title=${encodeURIComponent(existingProfile?.title || '')}`
+        });
+        
+        if (response.ok) {
+            // Update localStorage to mark as monitored
+            if (existingProfile) {
+                const profileIndex = selectedProfiles.findIndex(p => p.url.toLowerCase() === websiteUrl.toLowerCase());
+                if (profileIndex !== -1) {
+                    selectedProfiles.splice(profileIndex, 1); // Remove from queued list
+                    localStorage.setItem(scanKey, JSON.stringify(selectedProfiles));
+                }
+                
+                const scanSessionId = localStorage.getItem('currentScanSession') || 'default';
+                const domain = (() => {
+                    try { return new URL(websiteUrl).hostname; } catch { return websiteUrl; }
+                })();
+                localStorage.setItem(`scan-${scanSessionId}-visibility-${domain}`, 'hidden');
+                localStorage.setItem(`scan-${scanSessionId}-visibility-${websiteUrl}`, 'hidden');
+            }
+            
+            alert('✅ Website added successfully!');
+            closeAddSiteModal();
+            loadQueuedSites(); // Refresh the queued sites list
+            
+            // For LinkedIn, don't reload immediately
+            if (websiteUrl.includes('linkedin.com')) {
+                console.log('LinkedIn site added - waiting for scraping to complete...');
+            } else {
+                location.reload();
+            }
+        } else {
+            const text = await response.text();
+            alert(`❌ Error: ${text}`);
+        }
+        
+    } catch (error) {
+        console.error('Error adding website:', error);
+        alert('❌ Error adding website');
+    } finally {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }
+}
+
+function confirmDeleteWebsite(domain) {
+    domainToDelete = domain;
+    document.getElementById('deleteDomainName').textContent = domain;
+    document.getElementById('deleteModal').style.display = 'block';
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteModal').style.display = 'none';
+    domainToDelete = '';
+}
+
+async function deleteWebsite() {
+    if (!domainToDelete) return;
+    
+    console.log('🔧 DELETE WEBSITE called with:', domainToDelete); // ADD THIS LINE
+    
+    try {
+        const response = await fetch(`/delete_website/${advisorId}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({domain: domainToDelete})
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Use the URLs returned from the server
+            if (result.deleted_urls && result.deleted_urls.length > 0) {
+                console.log('🔧 About to remove from localStorage:', result.deleted_urls); // ADD THIS LINE
+                removeFromLocalStorage(result.deleted_urls);
+            }
+            
+            alert(`✅ ${result.message}\n\nDeleted:\n• ${result.deleted.pages} pages\n• ${result.deleted.changes} changes\n• ${result.deleted.issues} issues`);
+            closeDeleteModal();
+            location.reload();
+        } else {
+            alert(`❌ Error: ${result.error}`);
+        }
+        
+    } catch (error) {
+        console.error('Error deleting website:', error);
+        alert('❌ Error deleting website');
+    }
+}
+
+window.onclick = function(event) {
+    const deleteModal = document.getElementById('deleteModal');
+    const addSiteModal = document.getElementById('addSiteModal');
+    
+    if (event.target === deleteModal) {
+        closeDeleteModal();
+    }
+    if (event.target === addSiteModal) {
+        closeAddSiteModal();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const urlInput = document.getElementById('newWebsiteUrl');
+    if (urlInput) {
+        urlInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addWebsite();
+            }
+        });
+    }
+});
+
+
+// Add these two functions to your advisor details JavaScript:
+
+let loginCheckInterval = null;
+let modalShown = false;
+
+function showLoginModal(platform, message) {
+    if (modalShown) return;
+    modalShown = true;
+    
+    const modal = document.createElement('div');
+    modal.id = 'loginModal';
+    modal.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+        background: rgba(0,0,0,0.5); z-index: 10000; display: flex; 
+        justify-content: center; align-items: center;
+    `;
+    
+    const displayMessage = message || `Please login to ${platform} manually in the browser tab.`;
+    modal.innerHTML = `
+        <div style="background: white; padding: 30px; border-radius: 8px; text-align: center; max-width: 400px;">
+            <h2>🔑 ${platform} Action Required</h2>
+            <p>${displayMessage}</p>
+            <p><strong>Click "Continue" when completed.</strong></p>
+            <button onclick="confirmLogin(true)" class="btn btn-primary" style="margin: 10px;">✅ Continue</button>
+            <button onclick="confirmLogin(false)" class="btn btn-secondary" style="margin: 10px;">❌ Cancel</button>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+window.confirmLogin = function(confirmed) {
+    // STOP the login checking interval when cancelled or confirmed
+    if (loginCheckInterval) {
+        clearInterval(loginCheckInterval);
+        loginCheckInterval = null;
+        console.log('🔥 Login polling stopped');
+    }
+    
+    fetch('/clear_login_request', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({})
+    }).catch(error => {
+        console.error('Error clearing login request:', error);
+    });
+    
+    fetch('/confirm_login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({confirmed: confirmed})
+    }).catch(error => {
+        console.error('Error confirming login:', error);
+    });
+    
+    const modal = document.getElementById('loginModal');
+    if (modal) {
+        document.body.removeChild(modal);
+    }
+    modalShown = false;
+    
+    if (!confirmed) {
+        const addSiteModal = document.getElementById('addSiteModal');
+        if (addSiteModal && addSiteModal.style.display === 'block') {
+            closeAddSiteModal();
+        }
+    } else {
+        // If confirmed, reload the page after a short delay to show the new LinkedIn data
+        setTimeout(() => {
+            location.reload();
+        }, 2000);
+    }
+};
+
+
+document.addEventListener("DOMContentLoaded", () => {
+  const advisorId = {{ advisor[0] }};
+  
+  initializeBulkAdvisorProfiles(advisorId)
+    .then(() => {
+      loadQueuedSites();  // only runs after profiles are stored
+    });
+});
+
+
+
+</script>
+
+
+</body>
+</html>
