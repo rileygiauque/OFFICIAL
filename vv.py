@@ -25263,10 +25263,9 @@ def debug_schema():
     except Exception as e:
         return f"<pre>Error: {e}</pre>"
 
-
-    
 if __name__ == "__main__":
-    print("Starting app initialization...")
+    port = int(os.environ.get("PORT", 8000))
+    debug_mode = os.environ.get("APP_ENV", "dev") != "prod"
     
     # Load all disclosures from the custom file
     load_all_disclosures()
