@@ -135,7 +135,12 @@ import threading
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
 import difflib
-import schedule
+
+try:
+    import schedule
+except ImportError:
+    schedule = None
+
 from datetime import datetime
 
 import hashlib
