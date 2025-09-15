@@ -109,7 +109,10 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 import pty
-import spacy
+try:
+    import spacy
+except ImportError:
+    spacy = None
 import psycopg2
 import stripe
 import openai
