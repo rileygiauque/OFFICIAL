@@ -23152,7 +23152,14 @@ def remove_repeated_phrases_v2(text):
 
 
 # Load the spaCy model for English (you need to run 'python -m spacy download en_core_web_sm' once)
-nlp = spacy.load("en_core_web_sm")
+# nlp = spacy.load("en_core_web_sm")
+if spacy is not None:
+    try:
+        nlp = spacy.load("en_core_web_sm")
+    except:
+        nlp = None
+else:
+    nlp = None
 
 # Add the sentencizer to improve sentence splitting
 if "sentencizer" not in nlp.pipe_names:
