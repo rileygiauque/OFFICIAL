@@ -23162,7 +23162,8 @@ else:
     nlp = None
 
 # Add the sentencizer to improve sentence splitting
-if "sentencizer" not in nlp.pipe_names:
+if nlp is not None and "sentencizer" not in nlp.pipe_names:
+    if nlp is not None:
     nlp.add_pipe("sentencizer")
     
 
