@@ -28,7 +28,6 @@ transformers
 torch
 nltk
 selenium==4.27.1
-pydub==0.25.1
 SpeechRecognition==3.10.4
 bcrypt
 cryptography
