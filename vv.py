@@ -23315,10 +23315,13 @@ from flask import request, jsonify, send_file
 
 try:
     from reportlab.pdfgen import canvas
+    from reportlab.lib.pagesizes import letter
+    REPORTLAB_AVAILABLE = True
 except ImportError:
     canvas = None
+    letter = None
+    REPORTLAB_AVAILABLE = False
     
-from reportlab.lib.pagesizes import letter
 from io import BytesIO
 
 @app.route('/convert_text_to_pdf', methods=['POST'])
