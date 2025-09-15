@@ -11604,16 +11604,21 @@ limiter = Limiter(
 GOOGLE_API_KEY = "AIzaSyATnWGLnJZMiq4kdqMKOzPdqQ4l6SkGhnY"
 SEARCH_ENGINE_ID = "c2bf5ee9fed774e3d"
 
-DEEPSEEK_API_KEY = "sk-236ec31139a5435fa2b4720c53601c09"
-client = OpenAI(
-    api_key=DEEPSEEK_API_KEY,
-    base_url="https://api.deepseek.com/v1"
-)
+try:
+    DEEPSEEK_API_KEY = "sk-236ec31139a5435fa2b4720c53601c09"
+    client = OpenAI(
+        api_key=DEEPSEEK_API_KEY,
+        base_url="https://api.deepseek.com/v1"
+    )
 
-OPENAI_API_KEY = "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"  # Add your OpenAI key
-openai_client = OpenAI(
-    api_key=OPENAI_API_KEY
-)
+    OPENAI_API_KEY = "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"
+    openai_client = OpenAI(
+        api_key=OPENAI_API_KEY
+    )
+except Exception as e:
+    print(f"OpenAI client initialization failed: {e}")
+    client = None
+    openai_client = None
 
 PERPLEXITY_API_KEY = "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"
 
