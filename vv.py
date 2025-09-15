@@ -39,7 +39,10 @@ except ImportError:
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
-import speech_recognition as sr
+try:
+    import speech_recognition as sr
+except ImportError:
+    sr = None
 
 import json
 from flask import jsonify, request
