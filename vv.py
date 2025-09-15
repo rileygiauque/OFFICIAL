@@ -23312,7 +23312,12 @@ def analyze_text(text):
         #return False
 
 from flask import request, jsonify, send_file
-from reportlab.pdfgen import canvas
+
+try:
+    from reportlab.pdfgen import canvas
+except ImportError:
+    canvas = None
+    
 from reportlab.lib.pagesizes import letter
 from io import BytesIO
 
