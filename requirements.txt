@@ -8,6 +8,7 @@ anyio==4.6.2.post1
 async-timeout==4.0.3
 attrs==24.2.0
 bcrypt==4.2.1
+beautifulsoup4==4.12.3
 bidict==0.23.1
 blinker==1.8.2
 blis==1.0.1
