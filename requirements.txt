@@ -23,9 +23,6 @@ Werkzeug==3.0.4
 aiohttp==3.10.10
 pandas
 numpy
-scikit-learn
-transformers
-torch
 nltk
 selenium==4.27.1
 bcrypt
