@@ -93,7 +93,12 @@ from werkzeug.utils import secure_filename
 from difflib import SequenceMatcher, get_close_matches
 from markupsafe import Markup
 from docx import Document
-import vosk
+
+try:
+    import vosk
+except ImportError:
+    vosk = None
+    
 import wave
 import pdfplumber
 import uuid
