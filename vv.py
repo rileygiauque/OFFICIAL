@@ -25264,54 +25264,71 @@ def debug_schema():
         return f"<pre>Error: {e}</pre>"
 
 if __name__ == "__main__":
+    import os
+    import threading
+    
+    # Use PORT environment variable (required by Render)
     port = int(os.environ.get("PORT", 8000))
-    debug_mode = os.environ.get("APP_ENV", "dev") != "prod"
+    debug_mode = os.environ.get("APP_ENV", "prod") != "prod"  # Default to production
     
-    # Load all disclosures from the custom file
-    load_all_disclosures()
+    print("Starting application initialization...")
+    
+    try:
+        # Load all disclosures from the custom file
+        print("Loading disclosures...")
+        load_all_disclosures()
 
-    # Initialize skepticism words
-    initialize_skepticism_words()
-    
-    print("About to initialize BERT...")
-    # Initialize BERT model
-    if not initialize_bert():
-        logger.error("Failed to initialize BERT model")
-    else:
-        logger.info("BERT model initialized successfully")
-    
-    print("About to initialize advisor database...")
-    # Initialize advisor monitoring database
-    init_advisor_db()
-    logger.info("Advisor monitoring database initialized")
+        # Initialize skepticism words
+        print("Initializing skepticism words...")
+        initialize_skepticism_words()
+        
+        print("About to initialize BERT...")
+        # Initialize BERT model
+        if not initialize_bert():
+            print("ERROR: Failed to initialize BERT model")
+        else:
+            print("BERT model initialized successfully")
+        
+        print("About to initialize advisor database...")
+        # Initialize advisor monitoring database
+        init_advisor_db()
+        print("Advisor monitoring database initialized")
 
-    # Carousel Monitoring
-    init_carousel_monitoring()
-    logger.info("Carousel monitoring database initialized")
-    logger.info("Advisor monitoring database initialized")
+        # Carousel Monitoring
+        print("Initializing carousel monitoring...")
+        init_carousel_monitoring()
+        print("Carousel monitoring database initialized")
 
-    # Update database schema for existing tables
-    update_advisor_db_schema()
-    
-    print("About to start alternative pregeneration thread...")
-    # Start the alternative pregeneration thread
-    start_alternative_pregeneration_thread()
-    logger.info("Started alternative pregeneration thread")
-    
-    print("About to start scheduler thread...")
-    # Start the scheduler in a background thread using the simple schedule library
-    scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
-    scheduler_thread.start()
-    logger.info("Scheduler thread started - advisors will be monitored every 30 minutes")
+        # Update database schema for existing tables
+        print("Updating advisor database schema...")
+        update_advisor_db_schema()
+        
+        print("About to start alternative pregeneration thread...")
+        # Start the alternative pregeneration thread
+        start_alternative_pregeneration_thread()
+        print("Started alternative pregeneration thread")
+        
+        print("About to start scheduler thread...")
+        # Start the scheduler in a background thread using the simple schedule library
+        scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
+        scheduler_thread.start()
+        print("Scheduler thread started - advisors will be monitored every 30 minutes")
 
-    print("About to update compliance schema...")
-    # Update compliance schema
-    update_compliance_schema()
-    
-    print("About to update scan schema...")
-    # Update scan schema - ADD THIS NEW LINE
-    update_scan_schema()
-    
-    print("About to start Flask app on port 8000...")
-    app.run(debug=True, use_reloader=False, port=8000, host='0.0.0.0')
-    print("Flask app ended")
+        print("About to update compliance schema...")
+        # Update compliance schema
+        update_compliance_schema()
+        
+        print("About to update scan schema...")
+        # Update scan schema
+        update_scan_schema()
+        
+        print(f"About to start Flask app on port {port}...")
+        # Use the PORT environment variable and disable debug in production
+        app.run(debug=debug_mode, use_reloader=False, port=port, host='0.0.0.0')
+        print("Flask app ended")
+        
+    except Exception as e:
+        print(f"ERROR during application startup: {e}")
+        import traceback
+        traceback.print_exc()
+        exit(1)
