@@ -28,6 +28,5 @@ transformers
 torch
 nltk
 selenium==4.27.1
-SpeechRecognition==3.10.4
 bcrypt
 cryptography
