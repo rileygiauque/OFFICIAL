@@ -278,7 +278,11 @@ twitter_logged_in = False
 
 processed_post_hashes = set()
 
-import psutil
+try:
+    import psutil
+except ImportError:
+    psutil = None
+    
 import os
 import gc
 
