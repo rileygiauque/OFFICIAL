@@ -56,11 +56,14 @@ PyYAML==6.0.2
 requests==2.32.3
 scikit-learn
 scipy
+selenium==4.27.1
 sendgrid==6.11.0
 six==1.17.0
 SpeechRecognition==3.10.4
 stripe==11.3.0
 tavily-python==0.3.3
+torch
+transformers
 urllib3==2.2.3
 Werkzeug==3.0.4
 yarl==1.15.5
