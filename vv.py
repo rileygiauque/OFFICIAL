@@ -117,9 +117,18 @@ import psycopg2
 import stripe
 import openai
 
-from transformers import BertTokenizer, BertForSequenceClassification
-import torch
-from torch.nn.functional import softmax
+try:
+    from transformers import BertTokenizer, BertForSequenceClassification
+except ImportError:
+    BertTokenizer = None
+    BertForSequenceClassification = None
+    
+try:
+    import torch
+    from torch.nn.functional import softmax
+except ImportError:
+    torch = None
+    softmax = None
 
 import sqlite3
 import threading
