@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compliance Issues - {{ advisor[2] }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h2>Compliance Issues - {{ advisor[2] }}</h2>
+            <div class="nav-actions">
+                <a href="{{ url_for('dashboard') }}" class="btn btn-outline">Back to Dashboard</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="compliance-header">
+            <h1>🚨 Compliance Issues Found</h1>
+            <p>The following potential compliance issues were detected on {{ advisor[2] }}'s website:</p>
+        </div>
+
+        {% if issues %}
+            <div class="compliance-issues-list">
+                {% for issue in issues %}
+                    <div class="compliance-issue-card">
+                        <div class="issue-header">
+                            <span class="issue-severity">⚠️ Non-Compliant</span>
+                            <div class="issue-date timestamp">{{ issue[7]|format_datetime }}</div>
+                        </div>
+                        
+                        <div class="issue-content">
+                            <div class="flagged-content">
+                                <h4>Flagged Text:</h4>
+                                <p class="flagged-text">"{{ issue[3] }}"</p>
+                            </div>
+                            
+                            <div class="suggested-content">
+                                <h4>Suggested Alternative:</h4>
+                                <p class="suggested-text">"{{ issue[4] }}"</p>
+                            </div>
+                            
+                            <div class="issue-details">
+                                <p><strong>Page:</strong> {{ issue[2] }}</p>
+                                <p><strong>Confidence:</strong> {{ issue[5] }}</p>
+                                <p><strong>Rationale:</strong> {{ issue[6] }}</p>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="no-issues">
+                <h3>✅ No Compliance Issues Found</h3>
+                <p>This advisor's website appears to be compliant with FINRA regulations.</p>
+            </div>
+        {% endif %}
+    </div>
+<script>
+function convertToUserLocalTime() {
+    // Find all elements with class 'timestamp'
+    const timeElements = document.querySelectorAll('.timestamp');
+    
+    timeElements.forEach(element => {
+        const timeText = element.textContent.trim();
+        if (timeText && timeText !== 'Never' && timeText !== 'Unknown') {
+            try {
+                // Extract the date and time from formats like "12/30/2025 at 2:04 PM"
+                const match = timeText.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+at\s+(\d{1,2}):(\d{2})\s+(AM|PM)/);
+                if (match) {
+                    const [, month, day, year, hour, minute, ampm] = match;
+                    
+                    // Convert to 24-hour format
+                    let hour24 = parseInt(hour);
+                    if (ampm === 'PM' && hour24 !== 12) hour24 += 12;
+                    if (ampm === 'AM' && hour24 === 12) hour24 = 0;
+                    
+                    // FIXED: Create date object without assuming UTC (treats as local server time)
+                    const serverDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hour24.toString().padStart(2, '0')}:${minute}:00`);
+                    
+                    // Convert to user's local time
+                    const localTime = serverDate.toLocaleString('en-US', {
+                        month: '2-digit',
+                        day: '2-digit',
+                        year: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true,
+                        timeZoneName: 'short'
+                    });
+                    
+                    element.textContent = localTime.replace(',', ' at');
+                }
+            } catch (e) {
+                console.log('Error converting time:', e);
+                // Keep original time if conversion fails
+            }
+        }
+    });
+}
+
+// Run when page loads
+document.addEventListener('DOMContentLoaded', convertToUserLocalTime);
+</script>
+</body>
+</html>

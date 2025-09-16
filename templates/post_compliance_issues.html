@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post Compliance Issues - {{ page_title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <h2>Post Compliance Issues - {{ advisor[2] }}</h2>
+            <div class="nav-actions">
+                <a href="{{ url_for('advisor_details', advisor_id=advisor[0]) }}" class="btn btn-secondary">Back to Advisor</a>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-outline">Dashboard</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Page Header -->
+        <div class="page-profile">
+            <div class="profile-header">
+                <div class="profile-avatar">
+                    <div class="page-icon">📘</div>
+                </div>
+                <div class="profile-info">
+                    <h1>{{ page_title or 'Post Compliance Issues' }}</h1>
+                    <div class="info-details">
+                        <div class="info-item">
+                            <strong>👤 Advisor:</strong> {{ advisor[2] }}
+                        </div>
+                        <div class="info-item">
+                            <strong>⚠️ Total Issues:</strong> {{ issues|length }}
+                        </div>
+                        <div class="info-item">
+                            <strong>📘 Post ID:</strong> {{ post_id }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Issues List -->
+        {% if issues %}
+            <div class="compliance-issues-list">
+                <h2>All Compliance Issues ({{ issues|length }})</h2>
+                
+                {% for issue in issues %}
+                <div class="compliance-issue-card">
+                    <div class="issue-header">
+                        <div class="issue-severity">Issue #{{ issue[0] }}</div>
+                        <div class="issue-date">{{ issue[7]|format_datetime }}</div>
+                    </div>
+                    
+                    <div class="flagged-content">
+                        <h4>🚨 Flagged Content:</h4>
+                        <div class="flagged-text">
+                            {{ issue[3] }}
+                        </div>
+                    </div>
+                    
+                    {% if issue[4] %}
+                    <div class="suggested-content">
+                        <h4>💡 Suggested Alternative:</h4>
+                        <div class="suggested-text">
+                            {{ issue[4] }}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if issue[6] %}
+                    <div class="issue-details">
+                        <h4>📋 Analysis:</h4>
+                        <p>{{ issue[6] }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if issue[5] %}
+                    <div class="issue-details">
+                        <p><strong>Confidence Level:</strong> {{ issue[5] }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="issue-actions">
+                        <a href="{{ url_for('compliance_details', issue_id=issue[0]) }}" class="btn btn-primary btn-sm">View Full Details</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <h3>✅ No Compliance Issues</h3>
+                <p>No compliance issues found for this post.</p>
+                <a href="{{ url_for('advisor_details', advisor_id=advisor[0]) }}" class="btn btn-primary">Back to Advisor</a>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>

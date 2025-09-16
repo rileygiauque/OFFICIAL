@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tweet Compliance Issues - {{ page_title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .issue-actions {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        .btn-edit {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        
+        .btn-save {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        
+        .btn-cancel {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .btn-edit:hover, .btn-save:hover, .btn-cancel:hover {
+            opacity: 0.9;
+        }
+        
+        .editable-textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: inherit;
+            resize: vertical;
+        }
+        
+        .edit-mode {
+            background-color: #f8f9fa;
+            border-left: 4px solid #007bff;
+            padding-left: 15px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <h2>Tweet Compliance Issues - {{ advisor[2] }}</h2>
+            <div class="nav-actions">
+                <a href="{{ url_for('advisor_details', advisor_id=advisor[0]) }}" class="btn btn-secondary">Back to Advisor</a>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-outline">Dashboard</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Page Header -->
+        <div class="page-profile">
+            <div class="profile-header">
+                <div class="profile-avatar">
+                    <div class="page-icon">🐦</div>
+                </div>
+                <div class="profile-info">
+                    <h1>{{ page_title or 'Tweet Compliance Issues' }}</h1>
+                    <div class="info-details">
+                        <div class="info-item">
+                            <strong>👤 Advisor:</strong> {{ advisor[2] }}
+                        </div>
+                        <div class="info-item">
+                            <strong>⚠️ Total Issues:</strong> {{ issues|length }}
+                        </div>
+                        <div class="info-item">
+                            <strong>🐦 Tweet ID:</strong> {{ tweet_id }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Issues List -->
+        {% if issues %}
+            <div class="compliance-issues-list">
+                <h2>All Compliance Issues ({{ issues|length }})</h2>
+                
+                {% for issue in issues %}
+                <div class="compliance-issue-card" data-issue-id="{{ issue[0] }}">
+                    <div class="issue-header">
+                        <div class="issue-severity">Issue #{{ issue[0] }}</div>
+                        <div class="issue-date">{{ issue[7]|format_datetime }}</div>
+                    </div>
+                    
+                    <div class="flagged-content">
+                        <h4>🚨 Flagged Content:</h4>
+                        {% set flagged_text = issue[3] %}
+                        {% if flagged_text.startswith('Tweet') and '::' in flagged_text %}
+                            {% set display_text = flagged_text.split('::', 1)[1].strip() %}
+                        {% else %}
+                            {% set display_text = flagged_text %}
+                        {% endif %}
+                        <div class="flagged-text" id="flagged-{{ issue[0] }}">
+                            {{ display_text }}
+                        </div>
+                        <textarea class="editable-textarea" id="flagged-edit-{{ issue[0] }}" style="display: none;">{{ display_text }}</textarea>
+                    </div>
+                    
+                    {% if issue[4] %}
+                    <div class="suggested-content">
+                        <h4>💡 Suggested Alternative:</h4>
+                        <div class="suggested-text" id="suggested-{{ issue[0] }}">
+                            {{ issue[4] }}
+                        </div>
+                        <textarea class="editable-textarea" id="suggested-edit-{{ issue[0] }}" style="display: none;">{{ issue[4] }}</textarea>
+                    </div>
+                    {% else %}
+                    <div class="suggested-content">
+                        <h4>💡 Suggested Alternative:</h4>
+                        <div class="suggested-text" id="suggested-{{ issue[0] }}">
+                            <em>No suggestion provided</em>
+                        </div>
+                        <textarea class="editable-textarea" id="suggested-edit-{{ issue[0] }}" style="display: none;" placeholder="Add a suggested alternative..."></textarea>
+                    </div>
+                    {% endif %}
+                    
+                    {% if issue[6] %}
+                    <div class="issue-details">
+                        <h4>📋 Analysis:</h4>
+                        <p>{{ issue[6] }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if issue[5] %}
+                    <div class="issue-details">
+                        <p><strong>Confidence Level:</strong> {{ issue[5] }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="issue-actions">
+                        <button class="btn-edit" onclick="toggleEdit({{ issue[0] }})">✏️ Edit</button>
+                        <button class="btn-save" onclick="saveChanges({{ issue[0] }})" style="display: none;">💾 Save</button>
+                        <button class="btn-cancel" onclick="cancelEdit({{ issue[0] }})" style="display: none;">❌ Cancel</button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <h3>✅ No Compliance Issues</h3>
+                <p>No compliance issues found for this tweet.</p>
+                <a href="{{ url_for('advisor_details', advisor_id=advisor[0]) }}" class="btn btn-primary">Back to Advisor</a>
+            </div>
+        {% endif %}
+    </div>
+
+    <script>
+        function toggleEdit(issueId) {
+            const card = document.querySelector(`[data-issue-id="${issueId}"]`);
+            const flaggedText = document.getElementById(`flagged-${issueId}`);
+            const suggestedText = document.getElementById(`suggested-${issueId}`);
+            const flaggedEdit = document.getElementById(`flagged-edit-${issueId}`);
+            const suggestedEdit = document.getElementById(`suggested-edit-${issueId}`);
+            const editBtn = card.querySelector('.btn-edit');
+            const saveBtn = card.querySelector('.btn-save');
+            const cancelBtn = card.querySelector('.btn-cancel');
+            
+            // Hide text displays and show textareas
+            flaggedText.style.display = 'none';
+            suggestedText.style.display = 'none';
+            flaggedEdit.style.display = 'block';
+            suggestedEdit.style.display = 'block';
+            
+            // Toggle buttons
+            editBtn.style.display = 'none';
+            saveBtn.style.display = 'inline-block';
+            cancelBtn.style.display = 'inline-block';
+            
+            // Add edit mode styling
+            card.classList.add('edit-mode');
+        }
+        
+        function cancelEdit(issueId) {
+            const card = document.querySelector(`[data-issue-id="${issueId}"]`);
+            const flaggedText = document.getElementById(`flagged-${issueId}`);
+            const suggestedText = document.getElementById(`suggested-${issueId}`);
+            const flaggedEdit = document.getElementById(`flagged-edit-${issueId}`);
+            const suggestedEdit = document.getElementById(`suggested-edit-${issueId}`);
+            const editBtn = card.querySelector('.btn-edit');
+            const saveBtn = card.querySelector('.btn-save');
+            const cancelBtn = card.querySelector('.btn-cancel');
+            
+            // Reset textareas to original values
+            flaggedEdit.value = flaggedText.textContent.trim();
+            const originalSuggested = suggestedText.textContent.trim();
+            suggestedEdit.value = originalSuggested === 'No suggestion provided' ? '' : originalSuggested;
+            
+            // Show text displays and hide textareas
+            flaggedText.style.display = 'block';
+            suggestedText.style.display = 'block';
+            flaggedEdit.style.display = 'none';
+            suggestedEdit.style.display = 'none';
+            
+            // Toggle buttons
+            editBtn.style.display = 'inline-block';
+            saveBtn.style.display = 'none';
+            cancelBtn.style.display = 'none';
+            
+            // Remove edit mode styling
+            card.classList.remove('edit-mode');
+        }
+        
+        function saveChanges(issueId) {
+            const card = document.querySelector(`[data-issue-id="${issueId}"]`);
+            const flaggedText = document.getElementById(`flagged-${issueId}`);
+            const suggestedText = document.getElementById(`suggested-${issueId}`);
+            const flaggedEdit = document.getElementById(`flagged-edit-${issueId}`);
+            const suggestedEdit = document.getElementById(`suggested-edit-${issueId}`);
+            const editBtn = card.querySelector('.btn-edit');
+            const saveBtn = card.querySelector('.btn-save');
+            const cancelBtn = card.querySelector('.btn-cancel');
+            
+            // Get the edited values
+            const newFlaggedContent = flaggedEdit.value.trim();
+            const newSuggestedContent = suggestedEdit.value.trim();
+            
+            // Show loading state
+            saveBtn.textContent = '⏳ Saving...';
+            saveBtn.disabled = true;
+            
+            // Send AJAX request to save changes
+            fetch('/update_compliance_issue', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    issue_id: issueId,
+                    flagged_content: newFlaggedContent,
+                    suggested_alternative: newSuggestedContent
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update the display text
+                    flaggedText.textContent = newFlaggedContent;
+                    if (newSuggestedContent) {
+                        suggestedText.innerHTML = newSuggestedContent;
+                    } else {
+                        suggestedText.innerHTML = '<em>No suggestion provided</em>';
+                    }
+                    
+                    // Show text displays and hide textareas
+                    flaggedText.style.display = 'block';
+                    suggestedText.style.display = 'block';
+                    flaggedEdit.style.display = 'none';
+                    suggestedEdit.style.display = 'none';
+                    
+                    // Toggle buttons
+                    editBtn.style.display = 'inline-block';
+                    saveBtn.style.display = 'none';
+                    cancelBtn.style.display = 'none';
+                    
+                    // Remove edit mode styling
+                    card.classList.remove('edit-mode');
+                    
+                    // Show success message
+                    showNotification('Changes saved successfully!', 'success');
+                } else {
+                    showNotification('Error saving changes: ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('Error saving changes. Please try again.', 'error');
+            })
+            .finally(() => {
+                // Reset button state
+                saveBtn.textContent = '💾 Save';
+                saveBtn.disabled = false;
+            });
+        }
+        
+        function showNotification(message, type) {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 12px 24px;
+                border-radius: 4px;
+                color: white;
+                font-weight: bold;
+                z-index: 1000;
+                background-color: ${type === 'success' ? '#28a745' : '#dc3545'};
+            `;
+            notification.textContent = message;
+            
+            // Add to page
+            document.body.appendChild(notification);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                document.body.removeChild(notification);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

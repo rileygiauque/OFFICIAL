@@ -1,0 +1,1742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compliance Scanner</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+
+
+#addProfileModal { background: #fff; }
+
+.header-nav {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    left: 20px;
+    display: flex;
+    gap: 12px;
+    z-index: 10;
+    justify-content: space-between;
+}
+
+.add-profile-btn-header {
+    background: #2563eb;
+    color: white;
+    border: 1px solid #1e40af;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+}
+
+.add-profile-btn-header:hover {
+    background: #1e40af;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.back-btn {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    backdrop-filter: blur(10px);
+    font-size: 1rem;
+}
+
+.back-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+}
+
+/* Make whole issue toggle-able + neutral when resolved */
+.compliance-issue { position: relative; transition: background .2s, border-color .2s; }
+
+.resolve-badge{
+  position:absolute; top:8px; right:8px;
+  display:inline-flex; align-items:center; gap:6px;
+  padding:4px 10px; font-size:.75rem; border-radius:9999px;
+  background:#e6f0ff; color:#0b5ed7; border:1px solid #bfdbfe;
+  cursor:pointer; transition:transform .15s, opacity .15s;
+}
+.resolve-badge:hover{ transform: translateY(-1px); opacity:1; }
+
+.issue-status{ display:none; margin-top:.75rem; font-size:.85rem; color:#6b7280; }
+
+/* Resolved look */
+.compliance-issue.issue-resolved{ background:#f3f4f6; border-color:#cbd5e1; }
+.compliance-issue.issue-resolved .flagged-section,
+.compliance-issue.issue-resolved .suggested-section{
+  background:#f8fafc; border-color:#e5e7eb; box-shadow:none;
+}
+.compliance-issue.issue-resolved .flagged-text,
+.compliance-issue.issue-resolved .suggested-text,
+.compliance-issue.issue-resolved .risk-text{ color:#6b7280; }
+.compliance-issue.issue-resolved .flagged-label,
+.compliance-issue.issue-resolved .suggested-label{ color:#6b7280; }
+.compliance-issue.issue-resolved .issue-status{ display:flex; align-items:center; gap:.5rem; }
+
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(30, 58, 95, 0.95); /* Changed from 0.9 to 0.95 for darker background */
+    backdrop-filter: blur(5px);
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.modal-card {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.8);
+    width: 90vw; /* Changed from max-width to width */
+    max-width: 800px; /* Add max-width to prevent it from getting too wide on large screens */
+    max-height: 80vh;
+    overflow-y: auto;
+    z-index: 1001;
+    opacity: 0;
+    transition: all 0.4s ease;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.modal-card { background: transparent; }
+.modal-card.active { background: rgba(255,255,255,0.95); }
+
+
+.modal-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+
+.modal-card.active {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1002;
+    transition: background 0.2s ease;
+}
+
+.modal-close:hover {
+    background: white;
+}
+
+/* Prevent clicking on cards with no issues */
+.profile-card.no-issues-card {
+    cursor: default;
+}
+
+.profile-card.no-issues-card:hover {
+    transform: none;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.profile-url {
+    color: #718096;
+    font-size: 0.9rem;
+    text-decoration: none;
+    white-space: nowrap; /* Keep on single line */
+    overflow: hidden; /* Hide overflow */
+    text-overflow: ellipsis; /* Show ... at the end */
+    display: block;
+    max-width: 100%; /* Ensure it respects container width */
+}
+
+.profile-info {
+    min-width: 0; /* Allow flex item to shrink */
+    flex: 1; /* Take up remaining space */
+}
+
+        .status-clean {
+    color: #10b981;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+}
+
+.status-violations {
+    color: #dc2626;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    /* justify-content: space-between;  <-- remove this line */
+    justify-content: flex-start;        /* add this */
+}
+
+/* add this new rule */
+.status-violations.has-right {
+    justify-content: space-between;
+}
+
+.status-violations .left-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem; /* small space between ! and text */
+}
+
+.status-violations .carrot {
+    font-size: 1rem;
+    margin-left: auto;
+}
+
+.status-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0.75rem;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.clean-icon {
+    background: #10b981;
+    color: white;
+}
+
+.violation-icon {
+    background: #dc2626;
+    color: white;
+}
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #1e3a5f;
+            min-height: 100vh;
+            color: white;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Floating illustration */
+        .floating-illustration {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 300px;
+            height: auto;
+            opacity: 0.15;
+            z-index: 0;
+            pointer-events: none;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-15px); }
+        }
+
+        
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .scan-header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding-top: 2rem;
+        }
+
+        .scan-title {
+            color: white;
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 800;
+            margin-bottom: 1rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .scan-subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.2rem;
+            font-weight: 400;
+        }
+
+        .profiles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .profile-card {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: 2px solid transparent; /* Changed from blue to transparent */
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+    color: #1a202c;
+}
+
+.profile-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
+    border-radius: 16px 16px 0 0;
+    transform: scaleX(0); /* Start with no width */
+    transform-origin: left; /* Animate from left */
+    transition: transform 0.4s ease; /* Smooth animation */
+}
+
+.profile-card:hover::before {
+    transform: scaleX(1); /* Expand to full width on hover */
+}
+
+.profile-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
+    border-color: rgba(37, 99, 235, 0.3);
+    background: rgba(255, 255, 255, 1);
+}
+
+
+
+
+        .profile-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .profile-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            margin-right: 1rem;
+            object-fit: cover;
+        }
+
+        .profile-info h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1a202c;
+            margin-bottom: 0.25rem;
+        }
+
+        .profile-url {
+            color: #718096;
+            font-size: 0.9rem;
+            text-decoration: none;
+        }
+
+        .profile-url:hover {
+            color: #4a5568;
+        }
+
+        .status-section {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .status-checking {
+            display: flex;
+            align-items: center;
+            color: #2563eb;
+            font-weight: 500;
+        }
+
+        .status-checking .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #e2e8f0;
+            border-top: 2px solid #2563eb;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 0.75rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .status-ready {
+            color: #10b981;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+        }
+
+        .status-ready::before {
+            content: "✓";
+            background: #10b981;
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 0.75rem;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .issues-container {
+            display: none;
+            margin-top: 2rem;
+        }
+
+        .issues-container.show {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .issues-container .issue-card {
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    margin-bottom: 1.5rem;
+    padding: 1.25rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(10px);
+}
+
+.compliance-issue {
+    border: 2px solid #dc2626; /* Red border around entire issue */
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 2rem;
+    background: rgba(255, 255, 255, 0.5);
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.15);
+}
+
+.compliance-issue:last-child {
+    margin-bottom: 0;
+}
+
+.flagged-section {
+    background: rgba(254, 242, 242, 0.8);
+    border: 1px solid rgba(220, 38, 38, 0.2); /* Lighter border */
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.15); /* Add red shadow to flagged sections */
+}
+
+.flagged-text {
+    font-style: italic;
+    color: #dc2626;
+    font-weight: 600;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.flagged-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #dc2626;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.risk-text {
+    color: #64748b;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    font-weight: 500;
+    margin: 1rem 0;
+    padding-left: 1rem; /* Add this line */
+}
+
+.suggested-section {
+    background: rgba(240, 253, 244, 0.8);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.suggested-text {
+    color: #059669;
+    font-weight: 500;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.suggested-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #059669;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+        .no-issues {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: #10b981;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05));
+            border-radius: 12px;
+            border: 2px dashed rgba(16, 185, 129, 0.3);
+        }
+
+        .no-issues h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .no-issues p {
+            color: #059669;
+            font-size: 1rem;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(30, 58, 95, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+
+        .loading-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .loading-content {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2.5rem;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            color: #1a202c;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e2e8f0;
+            border-top: 4px solid #2563eb;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .floating-illustration {
+                width: 200px;
+                top: 10px;
+                right: 10px;
+            }
+            
+            .profiles-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .profile-card {
+                padding: 1.5rem;
+            }
+            
+            .scan-title {
+                font-size: 2rem;
+            }
+
+            .back-btn {
+                top: 10px;
+                left: 10px;
+                padding: 8px 16px;
+                font-size: 0.9rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .floating-illustration {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header-nav">
+    <a href="good" class="back-btn">← Back to Scanner</a>
+    <div style="display: flex; gap: 12px;">
+<button class="back-btn" onclick="redirectToAddProfile()">Add Page</button>
+        <button class="back-btn" id="myProfilesBtn" onclick="viewMyProfiles()" style="display: none;">My Profiles</button>
+        
+    </div>
+</div>
+
+    
+    <img src="static/illustration.png" alt="Compliance Dashboard" class="floating-illustration">
+
+    <div class="container">
+        <div class="scan-header">
+            <h1 class="scan-title" id="scanTitle">Profiles Being Checked</h1>
+            <p class="scan-subtitle" id="scanSubtitle">Scanning profiles for compliance issues...</p>
+        </div>
+
+        <div class="profiles-grid" id="profilesGrid">
+            <!-- Profiles will be populated here -->
+        </div>
+    </div>
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <h3>Loading compliance issues...</h3>
+            <p>Please wait while we fetch the details</p>
+        </div>
+    </div>
+
+    <script>
+
+
+
+// Add after your existing functions
+async function viewMyProfiles() {
+    const auth = await fetch('/api/check-auth').then(r => r.json());
+    if (!auth.authenticated) {
+        alert('Please login first.');
+        return;
+    }
+    window.location.href = '/search';
+}
+
+async function updateMyProfilesVisibility() {
+    const auth = await fetch('/api/check-auth').then(r => r.json());
+    const myProfilesBtn = document.getElementById('myProfilesBtn');
+    
+    if (auth.authenticated && myProfilesBtn) {
+        myProfilesBtn.style.display = 'block';
+    } else if (myProfilesBtn) {
+        myProfilesBtn.style.display = 'none';
+    }
+}
+
+// Update your existing DOMContentLoaded listener to include this:
+document.addEventListener('DOMContentLoaded', function() {
+    initializePage();
+    setupVisibilityListener();
+    updateMyProfilesVisibility(); // Add this line
+});
+
+// Get data from server (passed from Flask)
+const serverAdvisorId = {{ advisor_id | tojson if advisor_id else 'null' }};
+const serverAdvisorData = {{ advisor_data | tojson if advisor_data else 'null' }};
+const serverBulkProfiles = {{ bulk_profiles | tojson if bulk_profiles else 'null' }};
+
+console.log('🔧 DEBUGGING TEMPLATE DATA:');
+console.log('- advisor_id from template:', {{ advisor_id | tojson if advisor_id else 'null' }});
+console.log('- advisor_data from template:', {{ advisor_data | tojson if advisor_data else 'null' }});
+console.log('- serverAdvisorId variable:', serverAdvisorId);
+console.log('- serverAdvisorData variable:', serverAdvisorData);
+console.log('- localStorage currentScan:', localStorage.getItem('currentScan'));
+console.log('- localStorage selectedProfiles:', localStorage.getItem('selectedProfiles'));
+
+// Check if we have the specific advisor's profiles in localStorage
+if (serverAdvisorId) {
+    console.log(`- localStorage selectedProfiles_${serverAdvisorId}:`, localStorage.getItem(`selectedProfiles_${serverAdvisorId}`));
+}
+
+console.log('🔧 SERVER PROVIDED DATA:');
+console.log('- serverAdvisorId:', serverAdvisorId);
+console.log('- serverAdvisorData:', serverAdvisorData);
+
+function testRecheck() {
+    console.log('🔧 MANUAL RECHECK TRIGGERED');
+    checkInitialVisibilityStates();
+}
+
+function redirectToAddProfile() {
+  const currentScan = JSON.parse(localStorage.getItem('currentScan') || 'null');
+  if (!currentScan) { alert('No active scan found. Please start a new scan first.'); return; }
+
+  // inject mini styles once (mirrors good.html Add Page)
+  if (!document.getElementById('apStyles')) {
+    const s = document.createElement('style'); s.id = 'apStyles';
+    s.textContent = `
+      .platform-selector-simple{display:flex;gap:40px;justify-content:center;flex-wrap:wrap;margin:0 0 24px;}
+      .platform-selector-simple .platform-icon{width:70px;height:70px;cursor:pointer;opacity:.9;transition:transform .2s,opacity .2s;border:none}
+      .platform-selector-simple .platform-icon:hover{transform:scale(1.15);opacity:1}
+      .selected-platform-input-enhanced{display:flex;justify-content:center;margin-top:8px}
+      .selected-platform-input-enhanced .contained-box{background:#f8fafc;border:2px solid #e5e7eb;border-radius:16px;padding:32px;max-width:500px;width:100%;box-shadow:0 4px 12px rgba(0,0,0,.1);position:relative;transition:all .3s}
+      .selected-platform-input-enhanced .contained-box:hover{border-color:#cbd5e1;box-shadow:0 8px 25px rgba(0,0,0,.15)}
+      .ap-x{position:absolute;top:16px;right:16px;background:none;border:none;color:#9ca3af;width:24px;height:24px;cursor:pointer;border-radius:4px;font-size:18px}
+      .ap-x:hover{background:#f3f4f6;color:#4b5563;transform:scale(1.1)}
+      .ap-input{width:100%;padding:18px;border:2px solid #d1d5db;border-radius:12px;font-size:1rem;background:#fff}
+      .ap-input:focus{outline:none;border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+      .ap-submit{width:100%;margin-top:20px;padding:16px;background:#10b981;color:#fff;border:none;border-radius:12px;font-weight:600;display:none}
+      .ap-submit:hover{background:#059669;transform:translateY(-2px);box-shadow:0 8px 20px rgba(16,185,129,.4)}
+      .ap-subtitle{color:#6b7280;text-align:center;margin:0 0 24px 0;font-size:1rem;font-weight:500}
+    `;
+    document.head.appendChild(s);
+  }
+
+  // Build modal once
+  if (!document.getElementById('addProfileModal')) {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay'; overlay.id = 'addProfileOverlay';
+
+    const card = document.createElement('div');
+    card.className = 'modal-card'; card.id = 'addProfileModal';
+    card.innerHTML = `
+      <button class="modal-close" onclick="closeAddProfileModal()">×</button>
+      <div style="padding:32px;">
+        <h2 style="margin:0 0 8px;color:#111827;">Add Page</h2>
+        <p class="ap-subtitle">Select platform to add new profile</p>
+
+        <div class="platform-selector-simple" id="apPlatformRow">
+          <img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" class="platform-icon" data-platform="linkedin" alt="LinkedIn">
+          <img src="https://cdn-icons-png.flaticon.com/512/5968/5968958.png" class="platform-icon" data-platform="twitter" alt="Twitter">
+          <img src="https://cdn-icons-png.flaticon.com/512/733/733547.png" class="platform-icon" data-platform="facebook" alt="Facebook">
+          <img src="https://cdn-icons-png.flaticon.com/512/1384/1384060.png" class="platform-icon" data-platform="youtube" alt="YouTube">
+        </div>
+
+        <div class="selected-platform-input-enhanced" id="apSelectedWrap" style="display:none;">
+          <div class="contained-box">
+            <button class="ap-x" onclick="apResetSelection()">×</button>
+            <div style="text-align:center;margin-bottom:24px;">
+              <img id="apSelectedIcon" src="" alt="Selected Platform" style="width:80px;height:80px;margin-bottom:12px;">
+              <h3 id="apSelectedTitle" style="margin:0;color:#111827;font-size:1.3rem;font-weight:600;"></h3>
+            </div>
+            <input id="apProfileInput" class="ap-input" type="text" placeholder="">
+            <button id="apSubmit" class="ap-submit" type="button" onclick="submitNewProfileFromNew()">Add Page</button>
+          </div>
+        </div>
+      </div>`;
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(card);
+
+    // bind interactions once
+    const platformIcons = {
+      linkedin:'https://cdn-icons-png.flaticon.com/512/174/174857.png',
+      twitter:'https://cdn-icons-png.flaticon.com/512/5968/5968958.png',
+      facebook:'https://cdn-icons-png.flaticon.com/512/733/733547.png',
+      youtube:'https://cdn-icons-png.flaticon.com/512/1384/1384060.png'
+    };
+
+    document.getElementById('apPlatformRow').addEventListener('click', (e) => {
+      const icon = e.target.closest('.platform-icon'); if (!icon) return;
+      window._apSelectedPlatform = icon.dataset.platform;
+      document.querySelector('.ap-subtitle').style.display = 'none';
+      document.getElementById('apPlatformRow').style.display = 'none';
+      document.getElementById('apSelectedWrap').style.display = 'flex';
+
+      const name = window._apSelectedPlatform === 'twitter' ? 'X/Twitter'
+                 : window._apSelectedPlatform.charAt(0).toUpperCase()+window._apSelectedPlatform.slice(1);
+      document.getElementById('apSelectedIcon').src = platformIcons[window._apSelectedPlatform];
+      document.getElementById('apSelectedTitle').textContent = `Add your ${name} profile`;
+      const input = document.getElementById('apProfileInput');
+      input.placeholder = `Enter your ${name} username or profile URL`;
+      input.value = '';
+      document.getElementById('apSubmit').style.display = 'none';
+      setTimeout(()=>input.focus(), 50);
+    });
+
+    document.getElementById('apProfileInput').addEventListener('input', (e)=>{
+      document.getElementById('apSubmit').style.display = e.target.value.trim() ? 'block' : 'none';
+    });
+
+    requestAnimationFrame(()=>{ overlay.classList.add('active'); card.classList.add('active'); });
+  } else {
+    document.getElementById('addProfileOverlay').classList.add('active');
+    document.getElementById('addProfileModal').classList.add('active');
+  }
+}
+
+function apResetSelection(){
+  document.querySelector('.ap-subtitle').style.display = 'block';
+  document.getElementById('apPlatformRow').style.display = 'flex';
+  document.getElementById('apSelectedWrap').style.display = 'none';
+  window._apSelectedPlatform = null;
+}
+
+function closeAddProfileModal(){
+  const overlay = document.getElementById('addProfileOverlay');
+  const card = document.getElementById('addProfileModal');
+  if (!overlay || !card) return;
+  overlay.classList.remove('active'); card.classList.remove('active');
+  setTimeout(()=>{ overlay.remove(); card.remove(); }, 200);
+}
+
+async function submitNewProfileFromNew(){
+  console.log('🚀 SIMPLE APPROACH - REUSE EXISTING FLOW');
+  
+  const platform = window._apSelectedPlatform;
+  const value = (document.getElementById('apProfileInput').value || '').trim();
+  if (!platform || !value) return;
+
+  const btn = document.getElementById('apSubmit');
+  const original = btn.textContent; 
+  btn.textContent = 'Verifying…'; 
+  btn.disabled = true;
+
+  try {
+    // Step 1: Verify the profile (this works)
+    const res = await fetch('/verify-profile', {
+      method:'POST', 
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ platform, profileInput: value })
+    });
+    const data = await res.json();
+    
+    if (!data.success) { 
+      alert(data.error || 'Profile not found'); 
+      return; 
+    }
+
+    console.log('✅ Profile verified:', data.url);
+
+    // Step 2: Get current scan and profiles
+    const currentScan = JSON.parse(localStorage.getItem('currentScan') || 'null');
+    if (!currentScan || !currentScan.advisor_id) {
+      alert('No active scan found. Please start a new scan first.');
+      return;
+    }
+
+    // Get current profiles for comparison
+    const advisorKey = `selectedProfiles_${currentScan.advisor_id}`;
+    const oldProfiles = JSON.parse(localStorage.getItem(advisorKey) || '[]');
+    const generalProfiles = JSON.parse(localStorage.getItem('selectedProfiles') || '[]');
+
+    const displayName = platform === 'twitter' ? 'X (Twitter)' 
+                      : platform.charAt(0).toUpperCase() + platform.slice(1);
+
+    const newProfile = { platform, url: data.url, name: displayName, verified: true };
+
+    
+try {
+  const saveResp = await fetch(`/api/advisors/${currentScan.advisor_id}/profiles`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      profiles: [newProfile],   // send only the new item
+      merge: true               // server will append/dedupe
+    })
+  }).then(r => r.json());
+  console.log('💾 Saved to Postgres:', saveResp);
+} catch (err) {
+  console.warn('DB save failed; continuing with local UI update', err);
+}
+
+    // Create new profiles arrays
+    const newAdvisorProfiles = [...oldProfiles, newProfile];
+    const newGeneralProfiles = [...generalProfiles, newProfile];
+
+    console.log('💾 TRIGGERING LOCALSTORAGE OVERRIDE MECHANISM...');
+    console.log('- Old profiles count:', oldProfiles.length);
+    console.log('- New profiles count:', newAdvisorProfiles.length);
+    console.log('- New profile being added:', newProfile);
+
+    // ✅ CRITICAL: Store old value first, then new value to trigger the override
+    // The override in good.html compares old vs new to detect additions
+    localStorage.setItem(advisorKey, JSON.stringify(oldProfiles));
+    
+    // ✅ NOW store new value - this will trigger the localStorage.setItem override
+    localStorage.setItem(advisorKey, JSON.stringify(newAdvisorProfiles));
+    
+    // Also update the general profiles key
+    localStorage.setItem('selectedProfiles', JSON.stringify(newGeneralProfiles));
+
+    console.log('📡 localStorage override should have been triggered for key:', advisorKey);
+
+    // Force a storage event to trigger the same save process (backup mechanism)
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: advisorKey,
+      newValue: JSON.stringify(newAdvisorProfiles),
+      oldValue: JSON.stringify(oldProfiles),
+      storageArea: localStorage
+    }));
+
+    console.log('📡 Dispatched storage event to trigger existing save process');
+
+    // Add to UI immediately
+    const profiles = newGeneralProfiles;
+    const index = profiles.length - 1;
+    const newCard = createProfileCard(newProfile, currentScan, index);
+    document.getElementById('profilesGrid').appendChild(newCard);
+    showCheckingStatus(index);
+
+    closeAddProfileModal();
+
+  } catch (e) {
+    console.error('❌ Error:', e);
+    alert('Error verifying profile. Please try again.');
+  } finally {
+    btn.textContent = original; 
+    btn.disabled = false;
+  }
+}
+
+// Toggle "Fixed?" -> gray out entire issue and show status; allow Undo
+// --- Helpers to persist resolved state ---
+function getResolvedMap(advisorId){
+  try { return JSON.parse(localStorage.getItem(`resolvedIssues:${advisorId}`) || '{}'); }
+  catch { return {}; }
+}
+function setResolved(advisorId, issueId, isResolved){
+  const map = getResolvedMap(advisorId);
+  if (isResolved) map[issueId] = true; else delete map[issueId];
+  localStorage.setItem(`resolvedIssues:${advisorId}`, JSON.stringify(map));
+}
+function applyResolvedState(card, isResolved){
+  const btn = card.querySelector('.resolve-badge');
+  const statusEl = card.querySelector('.issue-status');
+  if (isResolved){
+    card.classList.add('issue-resolved');
+    if (btn) btn.textContent = '↩︎ Undo';
+    if (statusEl){ statusEl.innerHTML = '⏳ Your fix is being checked…'; statusEl.style.display = 'flex'; }
+  } else {
+    card.classList.remove('issue-resolved');
+    if (btn) btn.textContent = '🔧 Fixed?';
+    if (statusEl) statusEl.style.display = 'none';
+  }
+}
+
+// --- Click delegate: toggle + persist ---
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.resolve-badge');
+  if (!btn) return;
+  const card = btn.closest('.compliance-issue');
+  const issueId = card.dataset.issueId;
+  const currentScan = JSON.parse(localStorage.getItem('currentScan') || 'null');
+  if (!issueId || !currentScan) return;
+
+  const map = getResolvedMap(currentScan.advisor_id);
+  const isResolved = !map[issueId];  // flip
+  setResolved(currentScan.advisor_id, issueId, isResolved);
+  applyResolvedState(card, isResolved);
+});
+
+
+
+        let currentScanSession = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initializePage();
+            setupVisibilityListener();
+        });
+
+        function initializePage() {
+    // Use server data if available, otherwise fall back to localStorage
+    let currentScan, selectedProfiles;
+    
+    // INSIDE function initializePage() in HTML 1
+if (serverAdvisorId && serverAdvisorData) {
+    console.log('🔧 Using server-provided data');
+    currentScan = {
+        advisor_id: serverAdvisorId,
+        firm_name: serverAdvisorData.name || serverAdvisorData.firm,
+        website: serverAdvisorData.website_url
+    };
+    
+    selectedProfiles = serverBulkProfiles || [];
+
+    // Persist so other pages can reuse
+    localStorage.setItem('currentScan', JSON.stringify(currentScan));
+    localStorage.setItem('selectedProfiles', JSON.stringify(selectedProfiles));
+    localStorage.setItem(`selectedProfiles_${serverAdvisorId}`, JSON.stringify(selectedProfiles));
+
+    // Update localStorage to match current selection
+    localStorage.setItem('currentScan', JSON.stringify(currentScan));
+    localStorage.setItem('selectedProfiles', JSON.stringify(selectedProfiles));
+    localStorage.setItem(`selectedProfiles_${serverAdvisorId}`, JSON.stringify(selectedProfiles));
+} else {
+    console.log('🔧 Falling back to localStorage data');
+    currentScan = JSON.parse(localStorage.getItem('currentScan') || 'null');
+    selectedProfiles = JSON.parse(localStorage.getItem('selectedProfiles') || '[]');
+}
+
+    
+    console.log('🔧 FINAL DATA:');
+    console.log('- currentScan:', currentScan);
+    console.log('- selectedProfiles:', selectedProfiles);
+
+    if (!currentScan) {
+        showError('No scan data found');
+        return;
+    }
+
+    currentScanSession = localStorage.getItem('currentScanSession');
+    
+    // Set default visibility states for bulk uploaded profiles
+    if (selectedProfiles.length > 0) {
+        const scanSessionId = currentScanSession || 'default';
+        selectedProfiles.forEach(profile => {
+            const domain = extractDomain(profile.url);
+            const visibilityKey = `scan-${scanSessionId}-visibility-${domain}`;
+            
+            // Only set if not already set
+            if (!localStorage.getItem(visibilityKey)) {
+                localStorage.setItem(visibilityKey, 'hidden');
+            }
+        });
+    }
+    
+    // Update header and render profiles
+    updateHeader(currentScan);
+    renderProfiles(selectedProfiles, currentScan);
+}
+
+
+        function updateHeader(scanData) {
+    const title = document.getElementById('scanTitle');
+    const subtitle = document.getElementById('scanSubtitle');
+    
+    title.textContent = 'Profiles Being Checked';
+    
+    // Handle all possible undefined cases
+    let entityName = 'profiles'; // default fallback
+    
+    if (scanData.firm_name) {
+        entityName = scanData.firm_name;
+    } else if (scanData.name) {
+        entityName = scanData.name;
+    } else if (scanData.website) {
+        entityName = scanData.website;
+    } else if (scanData.website_url) {
+        entityName = scanData.website_url;
+    }
+    
+    subtitle.textContent = `Scanning ${entityName} for compliance issues`;
+}
+
+        function renderProfiles(profiles, scanData) {
+            const grid = document.getElementById('profilesGrid');
+            grid.innerHTML = '';
+
+            profiles.forEach((profile, index) => {
+                const card = createProfileCard(profile, scanData, index);
+                grid.appendChild(card);
+            });
+        }
+
+        function createProfileCard(profile, scanData, index) {
+            const card = document.createElement('div');
+            card.className = 'profile-card';
+            card.dataset.platform = profile.platform;
+            card.dataset.url = profile.url;
+            card.dataset.index = index;
+
+            const platformIcons = {
+                website: getWebsiteIcon(profile.url),
+                linkedin: 'https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/linkedin.svg',
+                facebook: 'https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/facebook.svg',
+                twitter: 'https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/x.svg',
+                youtube: 'https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/youtube.svg'
+            };
+
+            // ✅ FIXED: Clean up display names for auto-generated keys
+let displayName;
+if (profile.platform === 'twitter') {
+    displayName = 'X (Twitter)';
+} else if (profile.platform.startsWith('youtube')) {
+    displayName = 'YouTube';
+} else if (profile.platform.startsWith('linkedin')) {
+    displayName = 'LinkedIn';
+} else if (profile.platform.startsWith('facebook')) {
+    displayName = 'Facebook';
+} else if (profile.platform === 'website') {
+    displayName = 'Website';
+} else {
+    displayName = profile.platform.charAt(0).toUpperCase() + profile.platform.slice(1);
+}
+
+
+            const platformNames = {
+                website: 'Website',
+                linkedin: 'LinkedIn', 
+                facebook: 'Facebook',
+                twitter: 'X (Twitter)',
+                youtube: 'YouTube'
+            };
+
+            const cleanPlatform = profile.platform.split('_')[0]; // Get base platform name
+const iconStyle = cleanPlatform === 'linkedin' ? 'filter: invert(27%) sepia(94%) saturate(1529%) hue-rotate(187deg) brightness(103%) contrast(98%);' :
+                cleanPlatform === 'facebook' ? 'filter: invert(24%) sepia(94%) saturate(4893%) hue-rotate(213deg) brightness(97%) contrast(105%);' :
+                cleanPlatform === 'youtube' ? 'filter: invert(18%) sepia(95%) saturate(7471%) hue-rotate(4deg) brightness(103%) contrast(107%);' : '';
+
+            card.innerHTML = `
+                <div class="profile-header">
+                    <img src="${platformIcons[profile.platform.split('_')[0]]}" alt="${profile.platform}" class="profile-icon" style="${iconStyle}">
+                    <div class="profile-info">
+                        <h3>${displayName}</h3>
+                        <a href="${profile.url}" target="_blank" class="profile-url" onclick="event.stopPropagation()">${profile.url}</a>
+                    </div>
+                </div>
+                <div class="status-section">
+                    <div class="status-checking" id="status-${index}">
+                        <div class="spinner"></div>
+                        Checking compliance...
+                    </div>
+                </div>
+                <div class="issues-container" id="issues-${index}">
+                    <!-- Issues will be loaded here -->
+                </div>
+            `;
+
+            // Add click handler
+            card.addEventListener('click', () => showPlatformIssues(profile, scanData.advisor_id, index));
+
+            return card;
+        }
+
+        function getWebsiteIcon(url) {
+            try {
+                const domain = new URL(url).hostname.replace('www.', '');
+                return `https://logo.clearbit.com/${domain}`;
+            } catch {
+                return 'https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/internetexplorer.svg';
+            }
+        }
+
+        function setupVisibilityListener() {
+    // Listen for visibility changes from advisor details
+    window.addEventListener('profileVisibilityChanged', function(e){
+  const { domain, url, visible } = e.detail || {};
+  const cards = document.querySelectorAll('.profile-card');
+
+  const norm = (s) => (s || '').replace(/^www\./,'');
+  cards.forEach((card, i) => {
+    const cardUrl = card.dataset.url;
+    const cardDomain = (() => {
+      try { return new URL(cardUrl).hostname; } catch { return cardUrl; }
+    })();
+
+    const isMatch = url
+      ? (cardUrl === url)
+      : (norm(cardDomain) === norm(domain) || cardUrl.includes(norm(domain)));
+
+    if (isMatch) {
+      if (visible) {            // "Show" pressed in Advisor Details
+        checkIssuesAndUpdateStatus(i);
+      } else {                  // "Hide" pressed OR default state
+        showCheckingStatus(i);  // keep card visible, show "Review in Process..."
+      }
+    }
+  });
+});
+
+// Cross-page sync: react when Advisor Details updates visibility in localStorage
+window.addEventListener('storage', function (e) {
+  // Only handle our visibility keys for the active scan session
+  const scanSessionId = localStorage.getItem('currentScanSession') || 'default';
+  const prefix = `scan-${scanSessionId}-visibility-`;
+  if (!e.key || !e.key.startsWith(prefix)) return;
+
+  const keyId   = e.key.slice(prefix.length);     // e.g. "www.facebook.com" OR a full URL
+  const visible = e.newValue === 'visible';
+
+  const norm = (s) => (s || '').replace(/^https?:\/\//,'').replace(/^www\./,'');
+  const cards = document.querySelectorAll('.profile-card');
+
+  cards.forEach((card, i) => {
+    const cardUrl    = card.dataset.url;                               // full URL
+    const cardDomain = (() => { try { return new URL(cardUrl).hostname; } catch { return cardUrl; } })();
+
+    // Match if the changed key is the exact URL, or matches the domain (with/without www)
+    const isMatch = (cardUrl === keyId) ||
+                    (norm(cardUrl) === norm(keyId)) ||
+                    (norm(cardDomain) === norm(keyId)) ||
+                    cardUrl.includes(norm(keyId));
+
+    if (isMatch) {
+      if (visible) {
+        checkIssuesAndUpdateStatus(i);  // will render “Potential Compliance Violations Identified” if issues > 0
+      } else {
+        showCheckingStatus(i);          // shows the “Review in Process…” message
+      }
+    }
+  });
+});
+
+
+
+    // Check initial states on page load
+    setTimeout(checkInitialVisibilityStates, 1000);
+}
+
+        function checkInitialVisibilityStates() {
+    console.log('🔧 NEW.HTML: Starting initial visibility check');
+    
+    const profileCards = document.querySelectorAll('.profile-card');
+    const scanSessionId = localStorage.getItem('currentScanSession') || 'default';
+    
+    console.log('- Found profile cards:', profileCards.length);
+    console.log('- Current scan session:', scanSessionId);
+    
+    profileCards.forEach((card, index) => {
+        const url = card.dataset.url;
+        const domain = extractDomain(url);
+        
+        console.log(`🔧 Card ${index}:`);
+        console.log('- URL:', url);
+        console.log('- Extracted domain:', domain);
+        
+        // Try multiple possible visibility keys
+        const possibleKeys = [
+            `scan-${scanSessionId}-visibility-${url}`,      // Try full URL first
+            `scan-${scanSessionId}-visibility-${domain}`,   // Then domain
+            `scan-${scanSessionId}-visibility-www.${domain}`,
+            `scan-${scanSessionId}-visibility-${domain.replace('www.', '')}`,
+        ];
+        
+        console.log('- Trying these visibility keys:', possibleKeys);
+        
+        let visibilityState = null;
+        let matchedKey = null;
+        
+        for (const key of possibleKeys) {
+            const state = localStorage.getItem(key);
+            if (state !== null) {
+                visibilityState = state;
+                matchedKey = key;
+                break;
+            }
+        }
+        
+        console.log('- Matched key:', matchedKey);
+        console.log('- Visibility state found:', visibilityState);
+        
+        // ✅ FIXED: Default to 'hidden' state when no preference exists
+        if (visibilityState === 'visible') {
+            checkIssuesAndUpdateStatus(index);   
+        } else {
+            // Either explicitly hidden OR no preference found - default to hidden
+            showCheckingStatus(index);           
+        }
+        
+        console.log('---');
+    });
+}
+
+
+function checkAlternativeDomainFormats(domain, index) {
+    const scanSessionId = localStorage.getItem('currentScanSession');
+    
+    // Try different domain formats that might be stored in advisor details
+    const domainVariants = [
+        domain,
+        domain.replace('www.', ''),
+        'www.' + domain.replace('www.', ''),
+        `https://${domain}`,
+        `http://${domain}`,
+        `https://www.${domain}`,
+        `http://www.${domain}`
+    ];
+    
+    for (const variant of domainVariants) {
+        const visibilityKey = `scan-${scanSessionId}-visibility-${variant}`;
+        const visibilityState = localStorage.getItem(visibilityKey);
+        
+        if (visibilityState === 'visible') {
+            console.log('🔧 Found visibility state for variant:', variant);
+            checkIssuesAndUpdateStatus(index);
+            return;
+        }
+    }
+}
+
+
+
+        function extractDomain(url) {
+    console.log('🔧 extractDomain input:', url);
+    try {
+        const domain = new URL(url).hostname;
+        console.log('🔧 extractDomain output:', domain);
+        return domain;
+    } catch {
+        console.log('🔧 extractDomain fallback for:', url);
+        return url;
+    }
+}
+
+        function updateProfileStatus(domain, visible) {
+    console.log('🔧 NEW.HTML: updateProfileStatus called');
+    console.log('- Domain parameter:', domain);
+    console.log('- Visible parameter:', visible);
+    
+    const profileCards = document.querySelectorAll('.profile-card');
+    
+    profileCards.forEach((card, index) => {
+        const cardUrl = card.dataset.url;
+        const cardDomain = extractDomain(cardUrl);
+        
+        console.log(`- Card ${index}: URL=${cardUrl}, Domain=${cardDomain}`);
+        console.log(`- Does "${cardDomain}" === "${domain}"?`, cardDomain === domain);
+        console.log(`- Does "${cardUrl}" include "${domain}"?`, cardUrl.includes(domain));
+        
+        if (cardDomain === domain || cardUrl.includes(domain)) {
+            console.log('- ✅ MATCH FOUND! Updating card', index);
+            
+            if (visible) {
+                console.log('- Setting to check issues');
+                checkIssuesAndUpdateStatus(index);
+            } else {
+                console.log('- Setting to checking status');
+                showCheckingStatus(index);
+            }
+        }
+    });
+}
+
+function getCleanDomain(domain) {
+    return domain.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+}
+
+        function showCheckingStatus(index) {
+    console.log(`🔧 SHOW CHECKING STATUS: Card ${index}`);
+    
+    const statusEl = document.getElementById(`status-${index}`);
+    const issuesEl = document.getElementById(`issues-${index}`);
+    
+    console.log(`- Status element found:`, !!statusEl);
+    console.log(`- Current className:`, statusEl?.className);
+    console.log(`- Current innerHTML:`, statusEl?.innerHTML);
+    
+    statusEl.className = 'status-checking';
+            statusEl.innerHTML = '<div class="spinner"></div>Review in Process! For initial scans please check back after a few minutes for system to finish checking.';
+            issuesEl.classList.remove('show');
+    
+    console.log(`- NEW className:`, statusEl.className);
+    console.log(`- NEW innerHTML:`, statusEl.innerHTML);
+    console.log(`- Issues container show class removed:`, !issuesEl.classList.contains('show'));
+}
+
+function canonicalizeSocialUrl(platform, url){
+  try{
+    const u=new URL(url);
+    u.protocol='https:'; u.hostname=u.hostname.replace(/^www\.|^m\./,'');
+    if (platform.startsWith('facebook')){
+      if (u.pathname==='/profile.php'){
+        const id=u.searchParams.get('id');
+        u.search = id ? `?id=${id}` : '';
+      }else{
+        const p=u.pathname.split('/').filter(Boolean);
+        u.pathname='/' + (p[0]||''); u.search='';
+      }
+      u.hash='';
+    } else if (platform.startsWith('twitter') || platform.startsWith('x')){
+      u.hostname='x.com'; u.search=''; u.hash='';
+      const p=u.pathname.split('/').filter(Boolean);
+      if (p.length) u.pathname='/' + p[0];
+    } else if (platform.startsWith('linkedin')){
+      u.hostname='linkedin.com'; u.search=''; u.hash='';
+    } else if (platform.startsWith('youtube')){
+      u.hostname='youtube.com'; u.hash='';
+      if (u.pathname==='/watch'){
+        const v=u.searchParams.get('v');
+        u.search = v ? `?v=${v}` : '';
+      } else {
+        const segs=u.pathname.split('/').filter(Boolean);
+        u.pathname='/' + segs.slice(0,2).join('/'); u.search='';
+      }
+    }
+    if (u.pathname.length>1 && u.pathname.endsWith('/')) u.pathname=u.pathname.slice(0,-1);
+    return u.origin+u.pathname+u.search;
+  }catch{ return url; }
+}
+
+
+async function checkIssuesAndUpdateStatus(index) {
+    console.log(`🔧 CHECK ISSUES AND UPDATE STATUS: Card ${index}`);
+    
+    const profileCards = document.querySelectorAll('.profile-card');
+    const card = profileCards[index];
+    if (!card) {
+        console.log(`- Card ${index} not found!`);
+        return;
+    }
+    
+    const platform = card.dataset.platform;
+    const url = card.dataset.url;
+    const statusEl = document.getElementById(`status-${index}`);
+    
+    console.log(`- Platform: ${platform}, URL: ${url}`);
+    console.log(`- Status element found:`, !!statusEl);
+    
+    const currentScan = JSON.parse(localStorage.getItem('currentScan') || 'null');
+    if (!currentScan) {
+        console.log('- No currentScan found, falling back to checking status');
+        showCheckingStatus(index);
+        return;
+    }
+    
+    console.log('- currentScan found:', currentScan);
+    
+    try {
+        console.log('- Making API call to /api/platform-compliance-issues');
+        console.log('- Request body:', {
+            advisor_id: currentScan.advisor_id,
+            page_url: url,
+            platform: platform
+        });
+        
+        const response = await fetch('/api/platform-compliance-issues', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+        advisor_id: currentScan.advisor_id,
+        page_url: url,
+        platform: platform,
+        scan_session_id: currentScanSession
+    })
+});
+
+        console.log('- API Response status:', response.status);
+        console.log('- API Response ok:', response.ok);
+        
+        const data = await response.json();
+        console.log('- API Response data:', data);
+console.log('- data.success:', data.success);        // ADD THIS
+console.log('- data.issues:', data.issues);          // ADD THIS  
+console.log('- data.issues length:', data.issues?.length);  // ADD THIS
+console.log('- data.scanned:', data.scanned);        // ADD THIS
+        
+        if (data.success && data.issues && data.issues.length > 0) {
+    console.log('- Found issues, showing violations status');
+    statusEl.className = 'status-violations has-right';
+    statusEl.innerHTML = `
+        <div class="left-group">
+            <div class="status-icon violation-icon">!</div>
+            <span>View Potential Compliance Violations Identified</span>
+        </div>
+        <span class="carrot"></span>
+    `;
+} else if (data.success && data.scanned && data.issues && data.issues.length === 0) {
+    console.log('- Scan completed, no issues found, showing clean status');
+    statusEl.className = 'status-clean';
+    statusEl.innerHTML = `
+        <div class="status-icon clean-icon">✓</div>
+        No issues identified
+    `;
+    card.classList.add('no-issues-card');
+} else {
+    console.log('- Not scanned yet or no data, showing checking status');
+    showCheckingStatus(index);
+}
+    } catch (error) {
+        console.error('- API Error:', error);
+        console.log('- Falling back to checking status due to error');
+        showCheckingStatus(index);
+    }
+}
+
+        async function showPlatformIssues(profile, advisorId, index) {
+    const statusEl = document.getElementById(`status-${index}`);
+    
+    // Check if this platform is in "checking" state or has no issues
+    if (statusEl.classList.contains('status-checking') || statusEl.classList.contains('status-clean')) {
+        return; // Don't show modal for checking state or clean profiles
+    }
+
+    // Show loading
+    document.getElementById('loadingOverlay').classList.add('active');
+
+    try {
+        // Fetch compliance issues for this platform/URL
+        const response = await fetch('/api/platform-compliance-issues', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                advisor_id: advisorId,
+                page_url: profile.url,
+                platform: profile.platform
+            })
+        });
+
+        const data = await response.json();
+        
+        if (data.success && data.issues && data.issues.length > 0) {
+            showIssuesModal(data.issues, profile);
+        }
+
+    } catch (error) {
+        console.error('Error fetching issues:', error);
+    } finally {
+        document.getElementById('loadingOverlay').classList.remove('active');
+    }
+}
+
+function showIssuesModal(issues, profile) {
+    // Create modal overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    
+    // Create modal card
+    const modalCard = document.createElement('div');
+    modalCard.className = 'modal-card';
+    
+    // Add close button
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'modal-close';
+    closeBtn.innerHTML = '×';
+    closeBtn.onclick = closeModal;
+    
+    // Platform icons
+    const platformIcons = {
+        website: getWebsiteIcon(profile.url),
+        linkedin: 'https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/linkedin.svg',
+        facebook: 'https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/facebook.svg',
+        twitter: 'https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/x.svg',
+        youtube: 'https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/youtube.svg'
+    };
+
+
+// ✅ FIXED: Clean up display names for auto-generated keys
+let displayName;
+if (profile.platform === 'twitter') {
+    displayName = 'X (Twitter)';
+} else if (profile.platform.startsWith('youtube')) {
+    displayName = 'YouTube';
+} else if (profile.platform.startsWith('linkedin')) {
+    displayName = 'LinkedIn';
+} else if (profile.platform.startsWith('facebook')) {
+    displayName = 'Facebook';
+} else if (profile.platform === 'website') {
+    displayName = 'Website';
+} else {
+    displayName = profile.platform.charAt(0).toUpperCase() + profile.platform.slice(1);
+}
+
+    const platformNames = {
+        website: 'Website',
+        linkedin: 'LinkedIn', 
+        facebook: 'Facebook',
+        twitter: 'X (Twitter)',
+        youtube: 'YouTube'
+    };
+
+    const cleanPlatform = profile.platform.split('_')[0]; // Get base platform name
+const iconStyle = cleanPlatform === 'linkedin' ? 'filter: invert(27%) sepia(94%) saturate(1529%) hue-rotate(187deg) brightness(103%) contrast(98%);' :
+                cleanPlatform === 'facebook' ? 'filter: invert(24%) sepia(94%) saturate(4893%) hue-rotate(213deg) brightness(97%) contrast(105%);' :
+                cleanPlatform === 'youtube' ? 'filter: invert(18%) sepia(95%) saturate(7471%) hue-rotate(4deg) brightness(103%) contrast(107%);' : '';
+    
+    // Create platform header
+    const platformHeader = `
+        <div class="profile-header" style="margin-bottom: 2rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 1.5rem;">
+            <img src="${platformIcons[profile.platform.split('_')[0]]}" alt="${profile.platform}" class="profile-icon" style="${iconStyle}">
+            <div class="profile-info">
+                <h3>${displayName}</h3>
+                <a href="${profile.url}" target="_blank" class="profile-url" onclick="event.stopPropagation()">${profile.url}</a>
+            </div>
+        </div>
+        <div class="status-violations" style="margin-bottom: 2rem;">
+            <div class="status-icon violation-icon">!</div>
+            Potential Compliance Violations Identified
+        </div>
+    `;
+    
+    // Render issues content
+    const issuesHTML = issues.map((issue, i) => `
+  <div class="compliance-issue" data-issue-id="${profile.platform}:${issue.page_url || ''}:${i}">
+    <button class="resolve-badge" type="button">🔧 Fixed?</button>
+
+    <div class="flagged-section">
+      <span class="flagged-label">Flagged</span>
+      <div class="flagged-text">${escapeHtml(issue.flagged_text)}</div>
+      ${profile.platform === 'website' && issue.page_url ? `
+        <div style="margin-top:.5rem; font-size:.8rem; color:#9ca3af; font-style:normal;">
+          Source: ${issue.page_url}
+        </div>` : ''}
+    </div>
+
+    <div class="risk-text">${escapeHtml(issue.rationale)}</div>
+
+    ${issue.compliant_alternative ? `
+      <div class="suggested-section">
+        <span class="suggested-label">Suggested</span>
+        <div class="suggested-text">${escapeHtml(issue.compliant_alternative)}</div>
+      </div>` : ''}
+
+    <div class="issue-status"></div>
+  </div>
+`).join('');
+
+
+
+modalCard.innerHTML = `<div style="padding: 2rem; padding-top: 3rem;">${platformHeader}${issuesHTML}</div>`;
+modalCard.appendChild(closeBtn);
+
+// --- Reapply saved resolved states ---
+const currentScan = JSON.parse(localStorage.getItem('currentScan') || 'null');
+if (currentScan){
+  const saved = getResolvedMap(currentScan.advisor_id);
+  modalCard.querySelectorAll('.compliance-issue').forEach(card => {
+    if (saved[card.dataset.issueId]) applyResolvedState(card, true);
+  });
+}
+
+document.body.appendChild(overlay);
+document.body.appendChild(modalCard);
+
+setTimeout(() => {
+  overlay.classList.add('active');
+  modalCard.classList.add('active');
+}, 20);
+
+// --- Close handler ---
+function closeModal() {
+  overlay.classList.remove('active');
+  modalCard.classList.remove('active');
+  setTimeout(() => {
+    overlay.remove();
+    modalCard.remove();
+  }, 200); // match your CSS transition duration
+}
+
+
+    
+    function closeModal() {
+        overlay.classList.remove('active');
+        modalCard.classList.remove('active');
+        
+        setTimeout(() => {
+            document.body.removeChild(overlay);
+            document.body.removeChild(modalCard);
+        }, 400);
+    }
+}
+
+
+        function renderIssues(container, issues) {
+    if (!issues || issues.length === 0) {
+        container.innerHTML = `
+            <div class="no-issues">
+                <h3>✅ No Issues Found</h3>
+                <p>This profile appears to be compliant</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = issues.map(issue => `
+        <div class="issue-card">
+            <div class="flagged-section">
+                <span class="flagged-label">Flagged</span>
+                <div class="flagged-text">${escapeHtml(issue.flagged_text)}</div>
+            </div>
+            
+            <div class="risk-text">${escapeHtml(issue.rationale)}</div>
+            
+            ${issue.compliant_alternative ? `
+                <div class="suggested-section">
+                    <span class="suggested-label">Suggested Alternative</span>
+                    <div class="suggested-text">${escapeHtml(issue.compliant_alternative)}</div>
+                </div>
+            ` : ''}
+        </div>
+    `).join('');
+}
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showError(message) {
+            document.getElementById('profilesGrid').innerHTML = `
+                <div class="no-issues" style="grid-column: 1 / -1;">
+                    <h3>⚠️ ${message}</h3>
+                    <p>Please go back and try again</p>
+                </div>
+            `;
+        }
+
+// Add this function
+function recheckVisibilityStates() {
+    console.log('🔧 NEW.HTML: Rechecking visibility states');
+    checkInitialVisibilityStates();
+}
+
+// Update your DOMContentLoaded listener
+document.addEventListener('DOMContentLoaded', function() {
+    initializePage();
+    setupVisibilityListener();
+    
+    // Recheck when page becomes visible
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) {
+            console.log('🔧 NEW.HTML: Page became visible, rechecking states');
+            setTimeout(recheckVisibilityStates, 500);
+        }
+    });
+    
+    // Also recheck when window gets focus
+    window.addEventListener('focus', function() {
+        console.log('🔧 NEW.HTML: Window focused, rechecking states');
+        setTimeout(recheckVisibilityStates, 500);
+    });
+});
+    </script>
+</body>
+</html>

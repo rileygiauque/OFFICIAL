@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compliance Issue Details - {{ issue.advisor_name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            padding-bottom: 4rem;
+        }
+
+        /* Header */
+        .page-header {
+            background: white;
+            border-bottom: 1px solid #e9ecef;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .page-title {
+            color: #2c3e50;
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .page-subtitle {
+            color: #6c757d;
+            font-size: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .btn-back {
+            background: #6c757d;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .btn-back:hover {
+            background: #545b62;
+            color: white;
+            text-decoration: none;
+        }
+
+        /* Cards */
+        .content-card {
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .card-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .card-header h5 {
+            color: #2c3e50;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        /* Issue Summary */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .summary-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .summary-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .summary-value {
+            color: #2c3e50;
+            font-weight: 500;
+        }
+
+        .severity-badge {
+            background: #dc3545;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: inline-block;
+            width: fit-content;
+        }
+
+        .severity-badge.high {
+            background: #dc3545;
+        }
+
+        .severity-badge.medium {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .severity-badge.low {
+            background: #28a745;
+        }
+
+        .page-link {
+            color: #007bff;
+            text-decoration: none;
+            word-break: break-all;
+        }
+
+        .page-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Content Sections */
+        .content-comparison {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        .content-section {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .section-header {
+            padding: 1rem 1.5rem;
+            font-weight: 600;
+            font-size: 1rem;
+            border-bottom: 1px solid #e9ecef;
+            background: #f8f9fa;
+        }
+
+        .section-header.flagged {
+            color: #dc3545;
+            background: #fff5f5;
+            border-left: 4px solid #dc3545;
+        }
+
+        .section-header.suggested {
+            color: #28a745;
+            background: #f0fff4;
+            border-left: 4px solid #28a745;
+        }
+
+        .section-content {
+            padding: 1.5rem;
+            max-height: 300px;
+            overflow-y: auto;
+            line-height: 1.6;
+            color: #495057;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .flagged-content {
+            background: #fff5f5;
+            border: 1px solid #f5c6cb;
+            border-radius: 4px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .suggested-content {
+            background: #f0fff4;
+            border: 1px solid #c3e6cb;
+            border-radius: 4px;
+            padding: 1rem;
+        }
+
+        .empty-content {
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+            padding: 2rem;
+        }
+
+        /* Additional Info */
+        .additional-info {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .info-title {
+            color: #495057;
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .info-label {
+            font-size: 0.85rem;
+            color: #6c757d;
+            font-weight: 500;
+        }
+
+        .info-value {
+            font-size: 0.9rem;
+            color: #495057;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+                padding-bottom: 3rem;
+            }
+
+            .content-comparison {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .summary-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+
+            .page-title {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page-header">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h1 class="page-title">⚠️ Compliance Issue Details</h1>
+                    <p class="page-subtitle">{{ issue.advisor_name }} • <span class="timestamp">{{ issue.detected_at|format_datetime }}</span></p>
+                </div>
+                <a href="{{ url_for('advisor_details', advisor_id=issue.advisor_id) }}" class="btn-back">
+                    ← Back to Advisor
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Issue Summary -->
+        <div class="content-card">
+            <div class="card-header">
+                <h5>Issue Summary</h5>
+            </div>
+            <div class="card-body">
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <div class="summary-label">Severity Level</div>
+                        <div class="summary-value">
+                            <span class="severity-badge {{ issue.severity|lower }}">{{ issue.severity|title }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="summary-item">
+                        <div class="summary-label">Page URL</div>
+                        <div class="summary-value">
+                            {% if issue.page_url %}
+                                <a href="{{ issue.page_url }}" target="_blank" class="page-link">
+                                    {{ issue.page_url }}
+                                </a>
+                            {% else %}
+                                <span class="text-muted">Unknown</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="summary-item">
+                        <div class="summary-label">Issue Type</div>
+                        <div class="summary-value">{{ issue.issue_type or 'Compliance Violation' }}</div>
+                    </div>
+                    
+                    <div class="summary-item">
+                        <div class="summary-label">Status</div>
+                        <div class="summary-value">
+                            <span class="badge bg-warning">Flagged</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Flagged vs Suggested Content -->
+        <div class="content-comparison">
+            <div class="content-section">
+                <div class="section-header flagged">
+                    🚨 Flagged Content (Compliance Issue)
+                </div>
+                <div class="section-content">
+                    {% if issue.flagged_text %}
+                        <div class="flagged-content">
+                            {{ issue.flagged_text }}
+                        </div>
+                    {% else %}
+                        <div class="empty-content">No flagged content available</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% if issue.suggested_text %}
+            <div class="content-section">
+                <div class="section-header suggested">
+                    💡 Suggested Replacement
+                </div>
+                <div class="section-content">
+                    <div class="suggested-content">
+                        {{ issue.suggested_text }}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Additional Information -->
+        <div class="additional-info">
+            <div class="info-title">Additional Details</div>
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">Detection Date</div>
+                    <div class="info-value timestamp">{{ issue.detected_at|format_datetime }}</div>
+                
+                <div class="info-item">
+                    <div class="info-label">Rule Violated</div>
+                    <div class="info-value">{{ issue.rule_violated or 'Standard Compliance Rule' }}</div>
+                </div>
+                
+                {% if issue.context %}
+                <div class="info-item">
+                    <div class="info-label">Context</div>
+                    <div class="info-value">{{ issue.context }}</div>
+                </div>
+                {% endif %}
+                
+                <div class="info-item">
+                    <div class="info-label">Issue ID</div>
+                    <div class="info-value"><code>#{{ issue.id }}</code></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

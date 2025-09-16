@@ -1,0 +1,1952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ domain }} - {{ advisor[2] }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+
+.hide-for-youtube { display: none !important; }
+
+        /* Additional styles for the modal */
+
+	/* Hide Website Pages block and Add Site Link button for linkedin.com domains */
+.hide-for-linkedin {
+    display: none !important;
+}
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 500px;
+            text-align: center;
+        }
+        
+        .modal-buttons {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .form-group input[type="url"],
+        .form-group input[type="text"] {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        
+        .domain-hint {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            color: #495057;
+        }
+	/* Hide Website Pages block and Add Site Link button for x.com domains */
+.hide-for-xcom {
+    display: none !important;
+}
+
+	/* Hide Website Pages block and Add Site Link button for facebook.com domains */
+.hide-for-facebook {
+    display: none !important;
+}
+
+/* Hide Refresh Posts button for non-social domains */
+.hide-refresh-posts {
+    display: none !important;
+}
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <h2>{{ domain }} Details</h2>
+            <div class="nav-actions">
+                <button class="btn btn-secondary" onclick="showAddLinkModal()">Add Site Link</button>
+                <button class="btn btn-primary" onclick="checkAllPages()">Check All Pages</button>
+		<button class="btn btn-success" onclick="checkAllPagesConcurrent()" style="background: #28a745;">⚡ Fast Check All</button>
+		{% if not ('facebook.com' in domain.lower() or 'fb.com' in domain.lower()
+           or 'x.com' in domain.lower() or 'twitter.com' in domain.lower()
+           or 'linkedin.com' in domain.lower()
+           or 'youtube.com' in domain.lower() or 'youtu.be' in domain.lower()) %}
+
+<button onclick="scanAdvisorPage('{{ advisor[0] }}', '{{ domain }}')" class="btn btn-secondary">
+    🔍 Scan All
+</button>
+{% endif %}
+		<button onclick="refreshPosts()" class="btn btn-primary">Refresh Posts</button>
+                
+<!-- ADD NEW POST BUTTON - ONLY FOR SOCIAL MEDIA DOMAINS -->
+{% if 'facebook.com' in domain.lower() or 'fb.com' in domain.lower() or 'x.com' in domain.lower() or 'twitter.com' in domain.lower() or 'linkedin.com' in domain.lower() %}
+<button class="btn btn-primary" onclick="showAddPostModal()">Add New Post</button>
+{% endif %}
+
+<a href="{{ url_for('advisor_details', advisor_id=advisor[0]) }}" class="btn btn-secondary">Back to Firm Details</a>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-outline">Dashboard</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Domain Header -->
+        <div class="domain-profile">
+            <div class="profile-header">
+                <div class="profile-avatar">
+                    <div class="domain-icon">🌐</div>
+                </div>
+                <div class="profile-info">
+                    <h1>{{ domain }}</h1>
+                    <div class="info-details">
+                        <div class="info-item">
+                            <strong>👤 Advisor:</strong> {{ advisor[2] }}
+                        </div>
+                        <div class="info-item">
+                            <strong>📄 Total Pages:</strong> {{ pages_data|length }}
+                        </div>
+                        <div class="info-item">
+                            <strong>🔗 Domain:</strong> 
+                            <a href="https://{{ domain }}" target="_blank" class="website-link">{{ domain }}</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Stats -->
+        <div class="dashboard-header">
+            <h1>Pages Overview</h1>
+            <div class="dashboard-stats">
+                <div class="stat-item">
+                    <span class="stat-number">{{ total_pages }}</span>
+                    <span class="stat-label">Pages</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">{{ total_changes }}</span>
+                    <span class="stat-label">Changes</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number" style="color: #dc3545;">{{ total_issues }}</span>
+                    <span class="stat-label">Issues</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-status online">
+                        {% if total_issues == 0 %}Clean{% else %}Needs Review{% endif %}
+                    </span>
+                    <span class="stat-label">Status</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pages List -->
+        {% if pages_data %}
+    <div class="pages-list">
+       
+        
+        {% for page_data in pages_data %}
+    {# Skip showing main Twitter/X.com/LinkedIn pages, only show individual posts #}
+    {% if not ('x.com' in page_data.page[0].lower() or
+           'twitter.com' in page_data.page[0].lower() or
+           'linkedin.com' in page_data.page[0].lower() or
+           'youtube.com' in page_data.page[0].lower() or
+           'youtu.be' in page_data.page[0].lower()) %}
+
+    <div class="page-card">
+                <div class="page-header">
+                    <div class="page-info">
+                        <h3>{{ page_data.page[1] or 'Untitled Page' }}</h3>
+                        <div class="page-url">
+                            <a href="{{ page_data.page[0] }}" target="_blank" class="website-link">
+                                {{ page_data.page[0] }}
+                            </a>
+                        </div>
+    
+   
+                            
+
+                            <div class="page-stats">
+    {% if page_data.page[4] %}
+        <span class="stat-badge">Last Compliance Check: <span class="timestamp">{{ page_data.page[4]|format_datetime }}</span></span>
+    {% else %}
+        <span class="stat-badge pending">No compliance check</span>
+    {% endif %}
+    
+    <!-- ADD THIS SECTION FOR LAST SCAN -->
+    {% if page_data.page[5] %}
+        <span class="stat-badge">Last Scan: <span class="timestamp">{{ page_data.page[5]|format_datetime }}</span></span>
+    {% else %}
+        <span class="stat-badge pending">No content scan</span>
+    {% endif %}
+</div>
+                        </div>
+                        <div class="page-actions">
+    <button class="btn btn-primary btn-sm" onclick="checkSinglePage('{{ page_data.page[0] }}')">
+        🛡️ Check Page
+    </button>
+    <button class="btn btn-outline btn-sm" onclick="scanSinglePage('{{ page_data.page[0] }}')">
+    🔄 Scan Page
+</button>
+</div>
+
+                    </div>
+
+                    <!-- Page Statistics -->
+                    <div class="page-summary" style="margin-top: 0;">
+                        <div class="summary-stats">
+                            <div class="summary-item">
+                                <span class="summary-number">{{ page_data.changes_count }}</span>
+                                <span class="summary-label">Changes</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-number" style="color: #dc3545;">{{ page_data.issues_count }}</span>
+                                <span class="summary-label">Issues</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-status {% if page_data.issues_count == 0 %}clean{% else %}warning{% endif %}">
+                                    {% if page_data.issues_count == 0 %}✅ Clean{% else %}⚠️ Issues Found{% endif %}
+                                </span>
+                                <span class="summary-label">Status</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Show Details Button positioned separately -->
+                        {% if page_data.recent_changes or page_data.recent_issues %}
+                        <div class="summary-actions">
+                            <button class="btn btn-outline btn-sm toggle-details" onclick="togglePageDetails({{ loop.index }})">
+                                Show Details
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Expandable Details -->
+                    {% if page_data.recent_changes or page_data.recent_issues %}
+                    <div class="page-details">
+                        <div class="details-content" id="details-{{ loop.index }}" style="display: none;">
+                            <!-- Recent Changes -->
+                            {% if page_data.recent_changes %}
+                            <div class="section">
+                                <h4>📝 Recent Changes ({{ page_data.changes_count }} total)</h4>
+                                <div class="changes-list">
+                                    {% for change in page_data.recent_changes %}
+                                    <div class="change-item">
+                                        <div class="change-type {{ change[2] }}">{{ change[2].title() }}</div>
+                                        <div class="change-content">
+                                            <p>{{ change[6] or 'Website content changed' }}</p>
+                                            <div class="change-time timestamp">{{ change[5]|format_datetime }}</div>
+                                        </div>
+                                        <a href="{{ url_for('change_details', change_id=change[0]) }}" class="btn btn-outline btn-sm">View</a>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Recent Issues -->
+                            {% if page_data.recent_issues %}
+                            <div class="section">
+                                <h4>⚠️ Compliance Issues ({{ page_data.issues_count }} total)</h4>
+                                <div class="issues-list">
+                                    <div class="issue-notification">
+                                        <div class="issue-type-badge">Alert</div>
+                                        <div class="issue-notification-content">
+                                            <p>{{ page_data.issues_count }} compliance issue{% if page_data.issues_count != 1 %}s{% endif %} detected on this page</p>
+                                            <div class="issue-time">Latest: <span class="timestamp">{{ page_data.recent_issues[0][7]|format_datetime }}</span></div>
+                                        </div>
+                                        <a href="{{ url_for('compliance_issues_page', advisor_id=advisor[0]) }}?page_url={{ page_data.page[0] }}" class="btn btn-outline btn-sm">View</a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+		{% endif %}
+                {% endfor %}
+            </div>
+<div style="margin-top: 3rem;">
+
+
+<!-- FACEBOOK POSTS AS SEPARATE PAGE CARDS -->
+{% for page_data in pages_data %}
+    {% if 'facebook.com' in page_data.page[0].lower() or 'fb.com' in page_data.page[0].lower() %}
+        <!-- Only show posts if no specific_page filter OR if this is the specific page -->
+        {% set specific_page = request.args.get('specific_page') %}
+        {% if not specific_page or page_data.page[0] == specific_page %}
+            {% if page_data.page and page_data.page|length > 6 and page_data.page[6] %}
+		{% set content_text = page_data.page[6] %}
+            {% set post_sections = content_text.split('Post ') %}
+            
+            {% for section in post_sections %}
+                {% if section.strip() and section.strip() != '' %}
+                    {% set lines = section.strip().split('\n') %}
+                    {% if lines|length > 1 %}
+                        {% set raw_post_id = lines[0].strip() %}
+			{% set post_id = raw_post_id.split('(')[0].strip().rstrip(':') %}
+                        {% set post_issue_count = page_data.post_issues.get(post_id, 0) %}
+                        <div class="page-card tweet-card">
+                            <div class="page-header">
+                                <div class="page-info">
+                                    <h3>📘 Facebook Post {{ post_id }}</h3>
+                                    <div class="page-url"></div>
+                                    
+                                    <div class="page-stats">
+    {% set post_check_time = page_data.post_compliance_times.get(post_id) %}
+    {% if post_check_time %}
+        <span class="stat-badge">Last Compliance Check: <span class="timestamp">{{ post_check_time|format_datetime }}</span></span>
+    {% else %}
+        <span class="stat-badge pending">No compliance check</span>
+    {% endif %}
+</div>
+                                </div>
+                                <div class="page-actions">
+                                    <button class="btn btn-primary btn-sm" onclick="checkSinglePost('{{ page_data.page[0] }}', '{{ post_id }}')">
+                                        🛡️ Check Post
+                                    </button>
+<button class="btn btn-danger btn-sm" onclick="deletePost('{{ page_data.page[0] }}', '{{ post_id }}', 'post')" style="background: #dc3545;">
+        🗑️ Delete
+    </button>
+                                    
+                                </div>
+                            </div>
+
+                            <!-- Facebook Post Content -->
+                            <div style="padding: 15px; background: #f8f9fa; border-radius: 8px; margin: -20px 0 15px 0; white-space: pre-wrap; font-size: 14px; color: #333; line-height: 1.4;">
+                                {% set post_text = [] %}
+                                {% for line in lines[1:] %}
+                                    {% if line.strip() %}
+                                        {% set _ = post_text.append(line.strip()) %}
+                                    {% endif %}
+                                {% endfor %}
+                                {% if post_text %}
+                                    {{ post_text|join('\n') }}
+                                {% else %}
+                                    <em style="color: #666;">No post content available</em>
+                                {% endif %}
+                            </div>
+
+                            <!-- Stats section with ACTUAL issue count -->
+<div class="page-summary" style="margin-top: -5px;">
+    <div class="summary-stats">
+        <div class="summary-item">
+            <span class="summary-number">0</span>
+            <span class="summary-label">Changes</span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-number" style="color: #dc3545;">{{ post_issue_count }}</span>
+            <span class="summary-label">Issues</span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-status {% if post_issue_count == 0 %}clean{% else %}warning{% endif %}">
+                {% if post_issue_count == 0 %}✅ Clean{% else %}⚠️ Issues Found{% endif %}
+            </span>
+            <span class="summary-label">Status</span>
+        </div>
+    </div>
+    
+    <!-- Show Details Button for posts with issues -->
+    {% if post_issue_count > 0 %}
+    <div class="summary-actions">
+        <a href="{{ url_for('facebook_post_compliance_issues', advisor_id=advisor[0]) }}?page_url={{ page_data.page[0]|urlencode }}&post_id={{ post_id.split()[0] }}" class="btn btn-outline btn-sm">
+            View
+        </a>
+    </div>
+    {% endif %}
+</div>
+                        </div>
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    {% endif %}
+{% endif %}
+{% endfor %}
+
+<!-- TWITTER TWEETS AS SEPARATE PAGE CARDS -->
+{% for page_data in pages_data %}
+    {% if 'x.com' in page_data.page[0].lower() or 'twitter.com' in page_data.page[0].lower() %}
+
+{% set specific_page = request.args.get('specific_page') %}
+        {% if not specific_page or page_data.page[0] == specific_page %}
+
+
+        {% if page_data.page and page_data.page|length > 6 and page_data.page[6] %}
+            {% set content_text = page_data.page[6] %}
+            {% set tweet_sections = content_text.split('Tweet ') %}
+            
+            {% for section in tweet_sections %}
+                {% if section.strip() and section.strip() != '' %}
+                    {% set lines = section.strip().split('\n') %}
+                    {% if lines|length > 1 %}
+                        {% set raw_tweet_id = lines[0].strip() %}
+{% set tweet_id = raw_tweet_id.split('(')[0].strip().rstrip(':') %}
+                        {% set tweet_issue_count = page_data.tweet_issues.get(tweet_id, 0) %}
+                        <div class="page-card tweet-card">
+                            <div class="page-header">
+                                <div class="page-info">
+                                    <h3>🐦 Tweet {{ tweet_id }}</h3>
+                                    <div class="page-url"></div>
+                                    
+                                    <div class="page-stats">
+<!-- DEBUGG: Looking for tweet_id='{{ tweet_id }}' in {{ page_data.tweet_compliance_times }} -->
+    {% set tweet_check_time = page_data.tweet_compliance_times.get(tweet_id) %}
+    {% if tweet_check_time %}
+        <span class="stat-badge">Last Compliance Check: <span class="timestamp">{{ tweet_check_time|format_datetime }}</span></span>
+    {% else %}
+        <span class="stat-badge pending">No compliance check</span>
+    {% endif %}
+</div>
+                                </div>
+                                <div class="page-actions">
+                                    <button class="btn btn-primary btn-sm" onclick="checkSingleTweet('{{ page_data.page[0] }}', '{{ tweet_id }}')">
+                                        🛡️ Check Tweet
+                                    </button>
+<button class="btn btn-danger btn-sm" onclick="deletePost('{{ page_data.page[0] }}', '{{ tweet_id }}', 'tweet')" style="background: #dc3545;">
+        🗑️ Delete
+    </button>
+                                </div>
+                            </div>
+
+                            <!-- Tweet Content -->
+                            <div style="padding: 15px; background: #f8f9fa; border-radius: 8px; margin: -20px 0 15px 0; white-space: pre-wrap; font-size: 14px; color: #333; line-height: 1.4;">
+                                {% set tweet_text = [] %}
+                                {% for line in lines[1:] %}
+                                    {% if line.strip() %}
+                                        {% set _ = tweet_text.append(line.strip()) %}
+                                    {% endif %}
+                                {% endfor %}
+                                {% if tweet_text %}
+                                    {{ tweet_text|join('\n') }}
+                                {% else %}
+                                    <em style="color: #666;">No tweet content available</em>
+                                {% endif %}
+                            </div>
+
+                            <!-- Stats section with ACTUAL issue count -->
+<div class="page-summary" style="margin-top: -5px;">
+    <div class="summary-stats">
+        <div class="summary-item">
+            <span class="summary-number">0</span>
+            <span class="summary-label">Changes</span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-number" style="color: #dc3545;">{{ tweet_issue_count }}</span>
+            <span class="summary-label">Issues</span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-status {% if tweet_issue_count == 0 %}clean{% else %}warning{% endif %}">
+                {% if tweet_issue_count == 0 %}✅ Clean{% else %}⚠️ Issues Found{% endif %}
+            </span>
+            <span class="summary-label">Status</span>
+        </div>
+    </div>
+    
+    <!-- Show Details Button for tweets with issues -->
+    {% if tweet_issue_count > 0 %}
+    <div class="summary-actions">
+        <a href="{{ url_for('tweet_compliance_issues', advisor_id=advisor[0], page_url=page_data.page[0], tweet_id=tweet_id) }}" class="btn btn-outline btn-sm">
+            View
+        </a>
+    </div>
+    {% endif %}
+</div>
+                        </div>
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+        {% endif %} <!-- Close the specific_page filter -->
+    {% endif %} <!-- Close the platform check -->
+{% endfor %}
+
+<!-- LINKEDIN POSTS AS SEPARATE PAGE CARDS -->
+{% for page_data in pages_data %}
+    {% if 'linkedin.com' in page_data.page[0].lower() %}
+
+{% set specific_page = request.args.get('specific_page') %}
+        {% if not specific_page or page_data.page[0] == specific_page %}
+
+
+        {% if page_data.page and page_data.page|length > 6 and page_data.page[6] %}
+            {% set content_text = page_data.page[6] %}
+            {% set post_sections = content_text.split('Post ') %}
+            
+            {% for section in post_sections %}
+                {% if section.strip() and section.strip() != '' %}
+                    {% set lines = section.strip().split('\n') %}
+                    {% if lines|length > 1 %}
+                        {% set raw_post_id = lines[0].strip() %}
+			{% set post_id = raw_post_id.split('(')[0].strip().rstrip(':') %}
+                        {% set post_issue_count = page_data.post_issues.get(post_id, 0) %}
+                        <div class="page-card post-card">
+                            <div class="page-header">
+                                <div class="page-info">
+				    
+                                    <h3>💼 LinkedIn Post {{ post_id|clean_post_id }}</h3>
+                                    <div class="page-url"></div>
+                                    
+                                    <div class="page-stats">
+    {% set post_check_time = page_data.post_compliance_times.get(post_id) %}
+    {% if post_check_time %}
+        <span class="stat-badge">Last Compliance Check: <span class="timestamp">{{ post_check_time|format_datetime }}</span></span>
+    {% else %}
+        <span class="stat-badge pending">No compliance check</span>
+    {% endif %}
+</div>
+                                </div>
+                                <div class="page-actions">
+                                    <button class="btn btn-primary btn-sm" onclick="checkSingleLinkedInPost('{{ page_data.page[0] }}', '{{ post_id }}')">
+                                        🛡️ Check Post
+                                    </button>
+<button class="btn btn-danger btn-sm" onclick="deletePost('{{ page_data.page[0] }}', '{{ post_id }}', 'post')" style="background: #dc3545;">
+        🗑️ Delete
+    </button>
+                                </div>
+                            </div>
+
+                            <!-- LinkedIn Post Content -->
+<div style="padding: 15px; background: #f8f9fa; border-radius: 8px; margin: -20px 0 15px 0; white-space: pre-wrap; font-size: 14px; color: #333; line-height: 1.4;">
+    {% set post_text = [] %}
+    {% for line in lines[1:] %}
+        {% if line.strip() %}
+            {% set _ = post_text.append(line.strip()) %}
+        {% endif %}
+    {% endfor %}
+    {% if post_text %}
+        {% set raw_content = post_text|join('\n') %}
+        {{ raw_content|linkedin_header_filter }}
+    {% else %}
+        <em style="color: #666;">No post content available</em>
+    {% endif %}
+</div>
+                            <!-- Stats section with ACTUAL issue count -->
+                            <div class="page-summary" style="margin-top: -5px;">
+                                <div class="summary-stats">
+                                    <div class="summary-item">
+                                        <span class="summary-number">0</span>
+                                        <span class="summary-label">Changes</span>
+                                    </div>
+                                    <div class="summary-item">
+                                        <span class="summary-number" style="color: #dc3545;">{{ post_issue_count }}</span>
+                                        <span class="summary-label">Issues</span>
+                                    </div>
+                                    <div class="summary-item">
+                                        <span class="summary-status {% if post_issue_count == 0 %}clean{% else %}warning{% endif %}">
+                                            {% if post_issue_count == 0 %}✅ Clean{% else %}⚠️ Issues Found{% endif %}
+                                        </span>
+                                        <span class="summary-label">Status</span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Show Details Button for posts with issues -->
+                                {% if post_issue_count > 0 %}
+                                <div class="summary-actions">
+                                    <a href="{{ url_for('linkedin_post_compliance_issues', advisor_id=advisor[0]) }}?page_url={{ page_data.page[0]|urlencode }}&post_id={{ post_id.split()[0] }}" class="btn btn-outline btn-sm">
+                                        View
+                                    </a>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    {% endif %}
+{% endif %}
+{% endfor %}
+
+<!-- YOUTUBE VIDEOS AS SEPARATE PAGE CARDS -->
+{% for page_data in pages_data %}
+    {% if 'youtube.com' in page_data.page[0].lower() or 'youtu.be' in page_data.page[0].lower() %}
+        {% set specific_page = request.args.get('specific_page') %}
+        {% if not specific_page or page_data.page[0] == specific_page %}
+            {# Prefer DB rows; fallback to legacy blob parsing #}
+{% set videos = page_data.youtube_videos if page_data.youtube_videos is defined and page_data.youtube_videos else None %}
+
+{% if videos %}
+    {% for v in videos %}
+        {% set video_id = v.id %}
+        {% set video_issue_count = (page_data.video_issues.get(video_id, 0) if page_data.video_issues is defined else page_data.post_issues.get(video_id, 0)) %}
+        <div class="page-card post-card">
+            <div class="page-header">
+                <div class="page-info">
+                    <h3>▶️ YouTube Video {{ video_id }}</h3>
+                    <div class="page-stats">
+                        {% set v_check_time = page_data.post_compliance_times.get(video_id) if page_data.post_compliance_times else None %}
+                        {% if v_check_time %}
+                            <span class="stat-badge">Last Compliance Check: <span class="timestamp">{{ v_check_time|format_datetime }}</span></span>
+                        {% else %}
+                            <span class="stat-badge pending">No compliance check</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="page-actions">
+                    <button class="btn btn-primary btn-sm" onclick="checkSingleYouTubeVideo('{{ page_data.page[0] }}', '{{ video_id }}')">
+                        🛡️ Check Video
+                    </button>
+                </div>
+            </div>
+
+            <div style="padding: 15px; background: #f8f9fa; border-radius: 8px; margin: -20px 0 15px 0; white-space: pre-wrap; font-size: 14px; color: #333; line-height: 1.4;">
+                {% if v.title %}<div><strong>Title:</strong> {{ v.title }}</div>{% endif %}
+                {% if v.url %}<div><strong>URL:</strong> <a href="{{ v.url }}" target="_blank">{{ v.url }}</a></div>{% endif %}
+                {% if v.published %}<div><strong>Published:</strong> {{ v.published|format_datetime if v.published else v.published }}</div>{% endif %}
+                {% if v.description %}<div style="margin-top:8px; white-space:pre-wrap;">{{ v.description }}</div>{% endif %}
+            </div>
+
+            <div class="page-summary" style="margin-top: -5px;">
+                <div class="summary-stats">
+                    <div class="summary-item">
+                        <span class="summary-number">0</span>
+                        <span class="summary-label">Changes</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-number" style="color: #dc3545;">{{ video_issue_count }}</span>
+                        <span class="summary-label">Issues</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-status {% if video_issue_count == 0 %}clean{% else %}warning{% endif %}">
+                            {% if video_issue_count == 0 %}✅ Clean{% else %}⚠️ Issues Found{% endif %}
+                        </span>
+                        <span class="summary-label">Status</span>
+                    </div>
+                </div>
+
+                {% if video_issue_count > 0 %}
+                <div class="summary-actions">
+                    <a href="{{ url_for('compliance_issues_page', advisor_id=advisor[0]) }}?page_url={{ page_data.page[0]|urlencode }}&post_id={{ video_id }}" class="btn btn-outline btn-sm">
+                        View
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    {% endfor %}
+
+{% elif page_data.page and page_data.page|length > 6 and page_data.page[6] %}
+    {# LEGACY FALLBACK – keep your existing blob parsing #}
+    {% set content_text = page_data.page[6] %}
+    {% set video_sections = content_text.split('YouTube Video ') %}
+    {% for section in video_sections %}
+        {% if section.strip() and section.strip() != '' %}
+            {% set lines = section.strip().split('\n') %}
+            {% if lines|length > 1 %}
+                {% set raw_video_id = lines[0].strip() %}
+                {% set video_id = raw_video_id.split('(')[0].strip().rstrip(':') %}
+                {% set video_issue_count = (page_data.video_issues.get(video_id, 0) if page_data.video_issues is defined else page_data.post_issues.get(video_id, 0)) %}
+                <div class="page-card post-card">
+                    <div class="page-header">
+                        <div class="page-info">
+                            <h3>▶️ YouTube Video {{ video_id }}</h3>
+                            <div class="page-stats">
+                                {% set v_check_time = page_data.post_compliance_times.get(video_id) %}
+                                {% if v_check_time %}
+                                    <span class="stat-badge">Last Compliance Check: <span class="timestamp">{{ v_check_time|format_datetime }}</span></span>
+                                {% else %}
+                                    <span class="stat-badge pending">No compliance check</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="page-actions">
+                            <button class="btn btn-primary btn-sm" onclick="checkSingleYouTubeVideo('{{ page_data.page[0] }}', '{{ video_id }}')">
+                                🛡️ Check Video
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style="padding: 15px; background: #f8f9fa; border-radius: 8px; margin: -20px 0 15px 0; white-space: pre-wrap; font-size: 14px; color: #333; line-height: 1.4;">
+                        {% set body_lines = [] %}
+                        {% for line in lines[1:] %}
+                            {% if line.strip() %}
+                                {% set _ = body_lines.append(line.strip()) %}
+                            {% endif %}
+                        {% endfor %}
+                        {% if body_lines %}
+                            {{ body_lines|join('\n') }}
+                        {% else %}
+                            <em style="color: #666;">No video details available</em>
+                        {% endif %}
+                    </div>
+
+                    <div class="page-summary" style="margin-top: -5px;">
+                        <div class="summary-stats">
+                            <div class="summary-item">
+                                <span class="summary-number">0</span>
+                                <span class="summary-label">Changes</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-number" style="color: #dc3545;">{{ video_issue_count }}</span>
+                                <span class="summary-label">Issues</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-status {% if video_issue_count == 0 %}clean{% else %}warning{% endif %}">
+                                    {% if video_issue_count == 0 %}✅ Clean{% else %}⚠️ Issues Found{% endif %}
+                                </span>
+                                <span class="summary-label">Status</span>
+                            </div>
+                        </div>
+
+                        {% if video_issue_count > 0 %}
+                        <div class="summary-actions">
+                            <a href="{{ url_for('compliance_issues_page', advisor_id=advisor[0]) }}?page_url={{ page_data.page[0]|urlencode }}&post_id={{ video_id }}" class="btn btn-outline btn-sm">
+                                View
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+        {% endif %}
+    {% endfor %}
+{% endif %}
+{% endif %}
+{% endif %}
+{% endfor %} 
+
+
+</div>
+        {% else %}
+            <div class="empty-state">
+                <h3>📄 No Pages Found</h3>
+                <p>No pages found for this domain.</p>
+                <a href="{{ url_for('advisor_details', advisor_id=advisor[0]) }}" class="btn btn-primary">Back to Advisor</a>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Add Site Link Modal -->
+    <div id="addLinkModal" class="modal">
+        <div class="modal-content">
+            <h3>🔗 Add New Page to {{ domain }}</h3>
+            <div class="domain-hint">
+                <strong>Note:</strong> The URL must belong to the domain <strong>{{ domain }}</strong>
+            </div>
+            <div class="form-group">
+                <label for="newPageUrl">Page URL:</label>
+                <input type="url" id="newPageUrl" placeholder="https://{{ domain }}/page-name" required>
+            </div>
+            <div class="form-group">
+                <label for="newPageTitle">Page Title (optional):</label>
+                <input type="text" id="newPageTitle" placeholder="Enter a descriptive title">
+            </div>
+            <div class="modal-buttons">
+                <button onclick="addSiteLink()" class="btn btn-primary">Add Page</button>
+                <button onclick="closeAddLinkModal()" class="btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+<!-- Add New Post Modal -->
+<div id="addPostModal" class="modal">
+    <div class="modal-content">
+        <h3>📝 Add New Post to {{ domain }}</h3>
+        <div class="form-group">
+            <label for="newPostDate">Post Date:</label>
+            <input type="datetime-local" id="newPostDate" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" required>
+        </div>
+        <div class="form-group">
+            <label for="newPostContent">Post Content:</label>
+            <textarea id="newPostContent" style="width: 100%; height: 120px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;" placeholder="Enter the post content here..." required></textarea>
+        </div>
+        <div class="modal-buttons">
+            <button onclick="addNewPost()" class="btn btn-primary">Add Post</button>
+            <button onclick="closeAddPostModal()" class="btn-secondary">Cancel</button>
+        </div>
+    </div>
+</div>
+
+    <!-- JavaScript -->
+    <script>
+
+const advisorId = {{ advisor[0] }};
+const DOMAIN = '{{ domain|lower }}';
+
+async function checkAllPagesConcurrent() {
+    const button = event.target;
+    const originalText = button.innerHTML;
+    
+    try {
+        button.innerHTML = '⚡ Fast Checking...';
+        button.disabled = true;
+        
+        const domain = '{{ domain }}';
+        const startTime = performance.now();
+        
+        if (domain === 'x.com' || domain.endsWith('.x.com') || domain === 'twitter.com' || domain.endsWith('.twitter.com')) {
+            // TWITTER CONCURRENT CHECKING
+            await checkAllTwitterConcurrent();
+            
+        } else if (domain === 'facebook.com' || domain.endsWith('.facebook.com') || domain === 'fb.com' || domain.endsWith('.fb.com')) {
+            // FACEBOOK CONCURRENT CHECKING
+            await checkAllFacebookConcurrent();
+            
+        } else if (domain === 'linkedin.com' || domain.endsWith('.linkedin.com')) {
+            // LINKEDIN CONCURRENT CHECKING  
+            await checkAllLinkedInConcurrent();
+            
+        } else {
+            // WEBSITE PAGES CONCURRENT CHECKING (your working version)
+            const pageLinks = document.querySelectorAll('.website-link');
+            const pageUrls = Array.from(pageLinks).map(link => link.href);
+            
+            if (pageUrls.length === 0) {
+                alert('❌ No pages found to check');
+                return;
+            }
+            
+            const response = await fetch('/run_concurrent_compliance_check', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    advisor_id: advisorId,
+                    pages: pageUrls,
+                    max_workers: 3
+                })
+            });
+            
+            const result = await response.json();
+            const endTime = performance.now();
+            const clientTime = ((endTime - startTime) / 1000).toFixed(2);
+            
+            if (result.success) {
+                const metrics = result.results;
+                alert(`✅ CONCURRENT Website Check Completed!
+
+🚀 PERFORMANCE:
+- Server Time: ${metrics.total_time}s
+- Client Time: ${clientTime}s
+- Pages: ${metrics.processed_pages}/${metrics.total_pages}
+- Issues Found: ${metrics.total_issues}
+
+📊 ${Math.round(pageUrls.length * 15 / metrics.total_time)}x faster than sequential!`);
+                
+                location.reload();
+            } else {
+                alert('❌ Error: ' + result.error);
+            }
+        }
+        
+    } catch (error) {
+        console.error('❌ Concurrent check error:', error);
+        alert('❌ Error: ' + error.message);
+    } finally {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }
+}
+
+// TWITTER CONCURRENT CHECKING
+async function checkAllTwitterConcurrent() {
+    const tweetCards = document.querySelectorAll('.tweet-card');
+    
+    if (tweetCards.length === 0) {
+        alert('❌ No tweets found to check');
+        return;
+    }
+    
+    console.log(`🐦 Starting concurrent check for ${tweetCards.length} tweets`);
+    
+    const checkPromises = [];
+    const pageUrl = '{{ pages_data[0].page[0] if pages_data else "" }}';
+    
+    // Create concurrent promises for all tweets
+    for (let tweetCard of tweetCards) {
+        try {
+            const h3Element = tweetCard.querySelector('h3');
+            if (h3Element && h3Element.textContent.includes('Tweet ')) {
+                const tweetId = h3Element.textContent.replace('🐦 Tweet ', '').trim();
+                
+                if (pageUrl) {
+                    const promise = fetch('/run_compliance_check_page', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            advisor_id: advisorId,
+                            page_url: pageUrl,
+                            tweet_id: tweetId
+                        })
+                    }).then(response => {
+                        console.log(`✅ Completed tweet check: ${tweetId}`);
+                        return { tweetId, success: response.ok };
+                    }).catch(error => {
+                        console.error(`❌ Error checking tweet ${tweetId}:`, error);
+                        return { tweetId, success: false };
+                    });
+                    
+                    checkPromises.push(promise);
+                }
+            }
+        } catch (e) {
+            console.log('Error preparing tweet check:', e);
+        }
+    }
+    
+    // Wait for all tweet checks to complete
+    const startTime = performance.now();
+    const results = await Promise.all(checkPromises);
+    const endTime = performance.now();
+    const totalTime = ((endTime - startTime) / 1000).toFixed(2);
+    
+    const successful = results.filter(r => r.success).length;
+    const failed = results.length - successful;
+    
+    alert(`✅ CONCURRENT Twitter Check Completed!
+
+🐦 RESULTS:
+- Total Tweets: ${results.length}
+- Successful: ${successful}
+- Failed: ${failed}
+- Time: ${totalTime} seconds
+
+🚀 Much faster than sequential checking!`);
+    
+    location.reload();
+}
+
+// FACEBOOK CONCURRENT CHECKING  
+async function checkAllFacebookConcurrent() {
+    const postCards = document.querySelectorAll('.page-card');
+    const facebookPosts = Array.from(postCards).filter(card => {
+        const h3 = card.querySelector('h3');
+        return h3 && h3.textContent.includes('📘 Facebook Post ');
+    });
+    
+    if (facebookPosts.length === 0) {
+        alert('❌ No Facebook posts found to check');
+        return;
+    }
+    
+    console.log(`📘 Starting concurrent check for ${facebookPosts.length} Facebook posts`);
+    
+    const checkPromises = [];
+    const pageUrl = '{{ pages_data[0].page[0] if pages_data else "" }}';
+    
+    for (let postCard of facebookPosts) {
+        const h3Element = postCard.querySelector('h3');
+        if (h3Element) {
+            const postId = h3Element.textContent.replace('📘 Facebook Post ', '').trim();
+            
+            if (pageUrl) {
+                const promise = fetch('/run_compliance_check_page', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        advisor_id: advisorId,
+                        page_url: pageUrl,
+                        post_id: postId
+                    })
+                }).then(response => {
+                    console.log(`✅ Completed Facebook post check: ${postId}`);
+                    return { postId, success: response.ok };
+                }).catch(error => {
+                    console.error(`❌ Error checking Facebook post ${postId}:`, error);
+                    return { postId, success: false };
+                });
+                
+                checkPromises.push(promise);
+            }
+        }
+    }
+    
+    const startTime = performance.now();
+    const results = await Promise.all(checkPromises);
+    const endTime = performance.now();
+    const totalTime = ((endTime - startTime) / 1000).toFixed(2);
+    
+    const successful = results.filter(r => r.success).length;
+    
+    alert(`✅ CONCURRENT Facebook Check Completed!
+
+📘 RESULTS:
+- Total Posts: ${results.length}
+- Successful: ${successful}
+- Time: ${totalTime} seconds
+
+🚀 All posts checked simultaneously!`);
+    
+    location.reload();
+}
+
+// LINKEDIN CONCURRENT CHECKING
+async function checkAllLinkedInConcurrent() {
+    const postCards = document.querySelectorAll('.page-card');
+    const linkedinPosts = Array.from(postCards).filter(card => {
+        const h3 = card.querySelector('h3');
+        return h3 && h3.textContent.includes('💼 LinkedIn Post ');
+    });
+    
+    if (linkedinPosts.length === 0) {
+        alert('❌ No LinkedIn posts found to check');
+        return;
+    }
+    
+    console.log(`💼 Starting concurrent check for ${linkedinPosts.length} LinkedIn posts`);
+    
+    const checkPromises = [];
+    const pageUrl = '{{ pages_data[0].page[0] if pages_data else "" }}';
+    
+    for (let postCard of linkedinPosts) {
+        const checkButton = postCard.querySelector('button[onclick*="checkSingleLinkedInPost"]');
+        if (checkButton) {
+            const onclickValue = checkButton.getAttribute('onclick');
+            const postIdMatch = onclickValue.match(/'([^']+)',\s*'([^']+)'/);
+            const postId = postIdMatch ? postIdMatch[2] : null;
+            
+            if (pageUrl && postId) {
+                const promise = fetch('/run_compliance_check_page', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        advisor_id: advisorId,
+                        page_url: pageUrl,
+                        post_id: postId
+                    })
+                }).then(response => {
+                    console.log(`✅ Completed LinkedIn post check: ${postId}`);
+                    return { postId, success: response.ok };
+                }).catch(error => {
+                    console.error(`❌ Error checking LinkedIn post ${postId}:`, error);
+                    return { postId, success: false };
+                });
+                
+                checkPromises.push(promise);
+            }
+        }
+    }
+    
+    const startTime = performance.now();
+    const results = await Promise.all(checkPromises);
+    const endTime = performance.now();
+    const totalTime = ((endTime - startTime) / 1000).toFixed(2);
+    
+    const successful = results.filter(r => r.success).length;
+    
+    alert(`✅ CONCURRENT LinkedIn Check Completed!
+
+💼 RESULTS:
+- Total Posts: ${results.length}
+- Successful: ${successful}  
+- Time: ${totalTime} seconds
+
+🚀 All posts checked simultaneously!`);
+    
+    location.reload();
+}
+
+// Add New Post Modal functions
+function showAddPostModal() {
+    document.getElementById('addPostModal').style.display = 'block';
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    document.getElementById('newPostDate').value = now.toISOString().slice(0, 16);
+    document.getElementById('newPostContent').focus();
+}
+
+function closeAddPostModal() {
+    document.getElementById('addPostModal').style.display = 'none';
+    document.getElementById('newPostContent').value = '';
+    document.getElementById('newPostDate').value = '';
+}
+
+async function addNewPost() {
+    const contentInput = document.getElementById('newPostContent');
+    const dateInput = document.getElementById('newPostDate');
+    const postContent = contentInput.value.trim();
+    const postDate = dateInput.value;
+    
+    if (!postContent || !postDate) {
+        alert('Please enter both post content and date');
+        return;
+    }
+    
+    const button = event.target;
+    const originalText = button.innerHTML;
+    
+    try {
+        button.innerHTML = '⏳ Adding...';
+        button.disabled = true;
+        
+        const response = await fetch('/add_manual_post', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                advisor_id: advisorId,
+                domain: domain,
+                post_content: postContent,
+                post_date: postDate
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(`✅ ${result.message}`);
+            closeAddPostModal();
+            location.reload();
+        } else {
+            alert(`❌ Error: ${result.error}`);
+        }
+        
+    } catch (error) {
+        console.error('Error adding post:', error);
+        alert('❌ Error adding post');
+    } finally {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }
+}
+
+async function deletePost(pageUrl, postId, postType) {
+
+    // Clean the post ID before sending (same logic as template)
+    const cleanPostId = postId.split('(')[0].trim().replace(':', '');
+
+    const confirmDelete = confirm(`Are you sure you want to delete this ${postType}? This action cannot be undone.`);
+    if (!confirmDelete) return;
+    
+    const button = event.target;
+    const originalText = button.innerHTML;
+    
+    try {
+        button.innerHTML = '⏳ Deleting...';
+        button.disabled = true;
+        
+        const response = await fetch('/delete_post', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                advisor_id: advisorId,
+                page_url: pageUrl,
+                post_id: postId,
+                post_type: postType
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(`✅ ${postType.charAt(0).toUpperCase() + postType.slice(1)} deleted successfully!`);
+            location.reload();
+        } else {
+            alert(`❌ Error: ${result.error}`);
+        }
+        
+    } catch (error) {
+        console.error('Error deleting post:', error);
+        alert(`❌ Error deleting ${postType}`);
+    } finally {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }
+}
+
+// ADD THIS LINE - Define advisorId for use in JavaScript functions
+const advisorId = {{ advisor[0] }};
+
+async function checkSingleYouTubeVideo(pageUrl, videoId) {
+    const button = event.target;
+    const originalText = button.innerHTML;
+
+    try {
+        button.innerHTML = '⏳ Checking...';
+        button.disabled = true;
+
+        const response = await fetch('/run_compliance_check_page', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                advisor_id: advisorId,
+                page_url: pageUrl,
+                post_id: videoId   // same field name your backend already uses for FB/LinkedIn
+            })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            alert('✅ YouTube video compliance check completed: ' + (result.message || 'done'));
+            location.reload();
+        } else {
+            alert('❌ Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('❌ Error during YouTube check: ' + error.message);
+    } finally {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }
+}
+
+
+async function checkSingleLinkedInPost(pageUrl, postId) {
+    console.log('checkSingleLinkedInPost called with:', pageUrl, postId);
+    console.log('advisorId:', advisorId);
+    
+    const button = event.target;
+    const originalText = button.innerHTML;
+    
+    try {
+        button.innerHTML = '⏳ Checking...';
+        button.disabled = true;
+        
+        const requestData = {
+            advisor_id: advisorId,
+            page_url: pageUrl,
+            post_id: postId
+        };
+        
+        console.log('Sending request with data:', requestData);
+        
+        const response = await fetch('/run_compliance_check_page', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(requestData)
+        });
+        
+        console.log('Response status:', response.status);
+        console.log('Response:', response);
+        
+        const result = await response.json();
+        console.log('Result:', result);
+        
+        if (result.success) {
+            alert('✅ LinkedIn post compliance check completed: ' + result.message);
+            location.reload();
+        } else {
+            alert('❌ Error: ' + result.error);
+        }
+    } catch (error) {
+        console.error('Error during LinkedIn post compliance check:', error);
+        alert('❌ Error during LinkedIn post compliance check: ' + error.message);
+    } finally {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }
+}
+
+async function scanAdvisorPage(advisorId, domain) {
+    const button = event.target;
+    const originalText = button.innerHTML;
+    
+    try {
+        button.innerHTML = '⏳ Scanning...';
+        button.disabled = true;
+        
+        const response = await fetch('/scan_advisor_domain', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                advisor_id: advisorId,
+                domain: domain
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(`✅ ${result.message}\n\nScanned ${result.pages_scanned} pages for ${domain}\nChanges detected: ${result.changes_detected}`);
+            location.reload();
+        } else {
+            alert(`❌ Error: ${result.error}`);
+        }
+        
+    } catch (error) {
+        console.error('Error scanning advisor page:', error);
+        alert('❌ Error scanning page');
+    } finally {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }
+}
+
+// Hide Refresh Posts button for non-social domains
+document.addEventListener('DOMContentLoaded', function() {
+
+  const refreshButton = document.querySelector('button[onclick="refreshPosts()"]');
+
+  if (refreshButton) {
+    const isSocialDomain = (
+      domain === 'facebook.com' || domain.endsWith('.facebook.com') ||
+      domain === 'fb.com'       || domain.endsWith('.fb.com')       ||
+      domain === 'x.com'        || domain.endsWith('.x.com')        ||
+      domain === 'twitter.com'  || domain.endsWith('.twitter.com')  ||
+      domain === 'linkedin.com' || domain.endsWith('.linkedin.com') ||
+      domain === 'youtube.com'  || domain.endsWith('.youtube.com')  || domain === 'youtu.be'
+    );
+
+    if (!isSocialDomain) {
+      refreshButton.classList.add('hide-refresh-posts');
+    }
+  }
+});
+
+
+function refreshPosts() {
+    const domain = '{{ domain }}';
+    const advisorId = {{ advisor[0] }};
+    
+    // Get the specific_page parameter from the current URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const specificPage = urlParams.get('specific_page');
+    
+    // Determine which refresh function to call based on domain
+    if (domain === 'x.com' || domain.endsWith('.x.com') || domain === 'twitter.com' || domain.endsWith('.twitter.com')) {
+        // Call Twitter refresh
+        let refreshUrl = `{{ url_for('refresh_twitter', advisor_id=advisor[0], domain=domain) }}`;
+        if (specificPage) {
+            refreshUrl += `?specific_page=${encodeURIComponent(specificPage)}`;
+        }
+        window.location.href = refreshUrl;
+    } else if (domain === 'facebook.com' || domain.endsWith('.facebook.com') || domain === 'fb.com' || domain.endsWith('.fb.com')) {
+        // Call Facebook refresh
+        let refreshUrl = `/refresh_facebook/${advisorId}/${encodeURIComponent(domain)}`;
+        if (specificPage) {
+            refreshUrl += `?specific_page=${encodeURIComponent(specificPage)}`;
+        }
+        window.location.href = refreshUrl;
+    } else if (domain === 'linkedin.com' || domain.endsWith('.linkedin.com')) {
+        // Call LinkedIn refresh
+        let refreshUrl = `/refresh_linkedin/${advisorId}/${encodeURIComponent(domain)}`;
+        if (specificPage) {
+            refreshUrl += `?specific_page=${encodeURIComponent(specificPage)}`;
+        }
+        window.location.href = refreshUrl;
+      } else if (domain === 'youtube.com' || domain.endsWith('.youtube.com') || domain === 'youtu.be') {
+    // 🔴 YouTube refresh
+    let refreshUrl = `/refresh_youtube/${advisorId}/${encodeURIComponent(domain)}`;
+    if (specificPage) refreshUrl += `?specific_page=${encodeURIComponent(specificPage)}`;
+    window.location.href = refreshUrl;
+    } else {
+        // For other domains, show a message or handle differently
+        alert('Refresh Posts is only available for X.com, Facebook, LinkedIn, and YouTube domains.');
+    }
+}
+
+// Hide Website Pages block and Add Site Link button for facebook.com domains
+document.addEventListener('DOMContentLoaded', function() {
+    if (domain === 'facebook.com' || domain.endsWith('.facebook.com') || domain === 'fb.com' || domain.endsWith('.fb.com')) {
+        // Hide the Website Pages block
+        const pagesListElement = document.querySelector('.pages-list');
+        if (pagesListElement) {
+            pagesListElement.classList.add('hide-for-facebook');
+        }
+        
+        // Hide the Add Site Link button
+        const addSiteLinkButton = document.querySelector('button[onclick="showAddLinkModal()"]');
+        if (addSiteLinkButton) {
+            addSiteLinkButton.classList.add('hide-for-facebook');
+        }
+    }
+});
+
+// Hide Website Pages block and Add Site Link button for x.com domains
+document.addEventListener('DOMContentLoaded', function() {
+    if (domain === 'x.com' || domain.endsWith('.x.com')) {
+        // Hide the Website Pages block
+        const pagesListElement = document.querySelector('.pages-list');
+        if (pagesListElement) {
+            pagesListElement.classList.add('hide-for-xcom');
+        }
+        
+        // Hide the Add Site Link button
+        const addSiteLinkButton = document.querySelector('button[onclick="showAddLinkModal()"]');
+        if (addSiteLinkButton) {
+            addSiteLinkButton.classList.add('hide-for-xcom');
+        }
+    }
+});
+
+// Hide Website Pages block and Add Site Link button for linkedin.com domains
+document.addEventListener('DOMContentLoaded', function() {
+
+    if (domain === 'linkedin.com' || domain.endsWith('.linkedin.com')) {
+        // Hide the Website Pages block
+        const pagesListElement = document.querySelector('.pages-list');
+        if (pagesListElement) {
+            pagesListElement.classList.add('hide-for-linkedin');
+        }
+        
+        // Hide the Add Site Link button
+        const addSiteLinkButton = document.querySelector('button[onclick="showAddLinkModal()"]');
+        if (addSiteLinkButton) {
+            addSiteLinkButton.classList.add('hide-for-linkedin');
+        }
+    }
+});
+
+async function checkSinglePost(pageUrl, postId) {
+    const button = event.target;
+    const originalText = button.innerHTML;
+    
+    try {
+        button.innerHTML = '⏳ Checking...';
+        button.disabled = true;
+        
+        const response = await fetch('/run_compliance_check_page', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                advisor_id: advisorId,
+                page_url: pageUrl,
+                post_id: postId
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('✅ Facebook post compliance check completed: ' + result.message);
+            // ADD THIS LINE TO RELOAD THE PAGE
+            location.reload();
+        } else {
+            alert('❌ Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('❌ Error during Facebook post compliance check');
+    } finally {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }
+}
+
+async function scanSinglePost(pageUrl, postId) {
+    const button = event.target;
+    const originalText = button.innerHTML;
+    
+    try {
+        button.innerHTML = '⏳ Scanning...';
+        button.disabled = true;
+        
+        const response = await fetch('/scan_single_page', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                advisor_id: advisorId,
+                page_url: pageUrl,
+                post_id: postId
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('✅ Facebook post scan completed: ' + result.message);
+        } else {
+            alert('❌ Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('❌ Error during Facebook post scan');
+    } finally {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }
+}
+
+async function checkSingleTweet(pageUrl, tweetId) {
+    const button = event.target;
+    const originalText = button.innerHTML;
+    
+    try {
+        button.innerHTML = '⏳ Checking...';
+        button.disabled = true;
+        
+        const response = await fetch('/run_compliance_check_page', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                advisor_id: advisorId,
+                page_url: pageUrl,
+                tweet_id: tweetId
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('✅ Tweet compliance check completed: ' + result.message);
+            if (result.reload_page) {
+                location.reload(); // This will refresh the page to show updated counts
+            }
+        } else {
+            alert('❌ Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('❌ Error during tweet compliance check');
+    } finally {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }
+}
+
+async function scanSingleTweet(pageUrl, tweetId) {
+    const button = event.target;
+    const originalText = button.innerHTML;
+    
+    try {
+        button.innerHTML = '⏳ Scanning...';
+        button.disabled = true;
+        
+        const response = await fetch('/scan_single_page', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                advisor_id: advisorId,
+                page_url: pageUrl,
+                tweet_id: tweetId
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('✅ Tweet scan completed: ' + result.message);
+            location.reload();
+        } else {
+            alert('❌ Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('❌ Error during tweet scan');
+    } finally {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }
+}
+
+        
+        const domain = '{{ domain }}';
+
+        function showAddLinkModal() {
+            document.getElementById('addLinkModal').style.display = 'block';
+            document.getElementById('newPageUrl').focus();
+        }
+
+        function closeAddLinkModal() {
+            document.getElementById('addLinkModal').style.display = 'none';
+            document.getElementById('newPageUrl').value = '';
+            document.getElementById('newPageTitle').value = '';
+        }
+
+        async function addSiteLink() {
+            const urlInput = document.getElementById('newPageUrl');
+            const titleInput = document.getElementById('newPageTitle');
+            const pageUrl = urlInput.value.trim();
+            const pageTitle = titleInput.value.trim();
+            
+            if (!pageUrl) {
+                alert('Please enter a page URL');
+                return;
+            }
+            
+            const button = event.target;
+            const originalText = button.innerHTML;
+            
+            try {
+                button.innerHTML = '⏳ Adding...';
+                button.disabled = true;
+                
+                const response = await fetch(`/add_site_link/${advisorId}/${encodeURIComponent(domain)}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        page_url: pageUrl,
+                        page_title: pageTitle
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`✅ ${result.message}`);
+                    closeAddLinkModal();
+                    location.reload(); // Refresh to show the new page
+                } else {
+                    alert(`❌ Error: ${result.error}`);
+                }
+                
+            } catch (error) {
+                console.error('Error adding site link:', error);
+                alert('❌ Error adding page');
+            } finally {
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }
+        }
+
+        function togglePageDetails(index) {
+            const details = document.getElementById('details-' + index);
+            const button = event.target;
+            const isVisible = details.style.display !== 'none';
+            
+            details.style.display = isVisible ? 'none' : 'block';
+            button.textContent = isVisible ? 'Show Details' : 'Hide Details';
+        }
+
+        async function checkSinglePage(pageUrl) {
+            const button = event.target;
+            const originalText = button.innerHTML;
+            
+            try {
+                button.innerHTML = '⏳ Checking...';
+                button.disabled = true;
+                
+                const response = await fetch('/run_compliance_check_page', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        advisor_id: advisorId,
+                        page_url: pageUrl
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('✅ ' + result.message);
+                    location.reload();
+                } else {
+                    alert('❌ Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('❌ Error during compliance check');
+            } finally {
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }
+        }
+
+async function checkAllPages() {
+    const button = event.target;
+    const originalText = button.innerHTML;
+    
+    try {
+        button.innerHTML = '⏳ Checking All...';
+        button.disabled = true;
+        
+        // Check if this is x.com domain - if so, check all tweets instead
+        if (domain === 'x.com' || domain.endsWith('.x.com')) {
+            const tweetCards = document.querySelectorAll('.tweet-card');
+            let checked = 0;
+            
+            for (let tweetCard of tweetCards) {
+                try {
+                    // Extract tweet ID from the card's h3 element
+                    const h3Element = tweetCard.querySelector('h3');
+                    if (h3Element && h3Element.textContent.includes('Tweet ')) {
+                        const tweetId = h3Element.textContent.replace('🐦 Tweet ', '').trim();
+                        
+                        // Find the actual page URL from the pages data
+                        const pageUrl = '{{ pages_data[0].page[0] if pages_data else "" }}';
+                        
+                        if (pageUrl) {
+                            const response = await fetch('/run_compliance_check_page', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({
+                                    advisor_id: advisorId,
+                                    page_url: pageUrl,
+                                    tweet_id: tweetId
+                                })
+                            });
+                            
+                            if (response.ok) checked++;
+                        }
+                    }
+                } catch (e) {
+                    console.log('Error checking tweet:', e);
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+            
+            alert(`✅ Tweet compliance check completed!\nChecked ${checked} tweets.`);
+            location.reload();
+        
+        } else if (domain === 'facebook.com' || domain.endsWith('.facebook.com') || domain === 'fb.com' || domain.endsWith('.fb.com')) {
+            // Check all Facebook posts
+            const postCards = document.querySelectorAll('.page-card');
+            let checked = 0;
+            
+            for (let postCard of postCards) {
+                const h3Element = postCard.querySelector('h3');
+                if (h3Element && h3Element.textContent.includes('📘 Facebook Post ')) {
+                    const postId = h3Element.textContent.replace('📘 Facebook Post ', '').trim();
+                    const pageUrl = '{{ pages_data[0].page[0] if pages_data else "" }}';
+                    
+                    if (pageUrl) {
+                        const response = await fetch('/run_compliance_check_page', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                                advisor_id: advisorId,
+                                page_url: pageUrl,
+                                post_id: postId
+                            })
+                        });
+                        
+                        if (response.ok) checked++;
+                    }
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+            
+            alert(`✅ Facebook post compliance check completed!\nChecked ${checked} posts.`);
+            location.reload();
+
+        } else if (domain === 'linkedin.com' || domain.endsWith('.linkedin.com')) {
+            // Check all LinkedIn posts
+            const postCards = document.querySelectorAll('.page-card');
+            let checked = 0;
+            
+            for (let postCard of postCards) {
+                const h3Element = postCard.querySelector('h3');
+                if (h3Element && h3Element.textContent.includes('💼 LinkedIn Post ')) {
+                    const checkButton = postCard.querySelector('button[onclick*="checkSingleLinkedInPost"]');
+const onclickValue = checkButton.getAttribute('onclick');
+const postIdMatch = onclickValue.match(/'([^']+)',\s*'([^']+)'/);
+const postId = postIdMatch ? postIdMatch[2] : null;
+                    const pageUrl = '{{ pages_data[0].page[0] if pages_data else "" }}';
+                    
+                    if (pageUrl) {
+                        const response = await fetch('/run_compliance_check_page', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                                advisor_id: advisorId,
+                                page_url: pageUrl,
+                                post_id: postId
+                            })
+                        });
+                        
+                        if (response.ok) checked++;
+                    }
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+            
+            alert(`✅ LinkedIn post compliance check completed!\nChecked ${checked} posts.`);
+            location.reload();
+            
+        } else {
+            // Original functionality for non-social media domains
+            const pageLinks = document.querySelectorAll('.website-link');
+            let checked = 0;
+            
+            for (let link of pageLinks) {
+                try {
+                    const response = await fetch('/run_compliance_check_page', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            advisor_id: advisorId,
+                            page_url: link.href
+                        })
+                    });
+                    
+                    if (response.ok) checked++;
+                } catch (e) {
+                    console.log('Error checking:', link.href);
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+            
+            alert(`✅ Compliance check completed!\nChecked ${checked} pages.`);
+            location.reload();
+        }
+        
+    } catch (error) {
+        alert('❌ Error during bulk compliance check');
+    } finally {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }
+}
+
+
+        // Close modal when clicking outside of it
+        window.onclick = function(event) {
+            const modal = document.getElementById('addLinkModal');
+            if (event.target === modal) {
+                closeAddLinkModal();
+            }
+        }
+
+        // Allow Enter key to add page in modal
+        document.getElementById('newPageUrl').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addSiteLink();
+            }
+        });
+
+        document.getElementById('newPageTitle').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addSiteLink();
+            }
+        });
+
+function convertToUserLocalTime() {
+    // Find all elements with class 'timestamp'
+    const timeElements = document.querySelectorAll('.timestamp');
+    
+    timeElements.forEach(element => {
+        const timeText = element.textContent.trim();
+        if (timeText && timeText !== 'Never' && timeText !== 'Unknown') {
+            try {
+                // Extract the date and time from formats like "12/30/2025 at 2:04 PM"
+                const match = timeText.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+at\s+(\d{1,2}):(\d{2})\s+(AM|PM)/);
+                if (match) {
+                    const [, month, day, year, hour, minute, ampm] = match;
+                    
+                    // Convert to 24-hour format
+                    let hour24 = parseInt(hour);
+                    if (ampm === 'PM' && hour24 !== 12) hour24 += 12;
+                    if (ampm === 'AM' && hour24 === 12) hour24 = 0;
+                    
+                    // FIXED: Create date object without assuming UTC (treats as local server time)
+                    const serverDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hour24.toString().padStart(2, '0')}:${minute}:00`);
+                    
+                    // Convert to user's local time
+                    const localTime = serverDate.toLocaleString('en-US', {
+                        month: '2-digit',
+                        day: '2-digit',
+                        year: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true,
+                        timeZoneName: 'short'
+                    });
+                    
+                    element.textContent = localTime.replace(',', ' at');
+                }
+            } catch (e) {
+                console.log('Error converting time:', e);
+                // Keep original time if conversion fails
+            }
+        }
+    });
+}
+
+// Run when page loads
+document.addEventListener('DOMContentLoaded', convertToUserLocalTime);
+
+async function scanSinglePage(pageUrl) {
+    const button = event.target;
+    const originalText = button.innerHTML;
+    
+    try {
+        button.innerHTML = '⏳ Scanning...';
+        button.disabled = true;
+        
+        const response = await fetch('/scan_single_page', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                advisor_id: advisorId,
+                page_url: pageUrl
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            let message = '✅ ' + result.message;
+            if (result.changes_detected > 0) {
+                message += `\n\nChanges detected: ${result.changes_detected}`;
+            }
+            if (result.content_updated) {
+                message += '\nPage content updated in database.';
+            }
+            alert(message);
+            location.reload(); // Refresh to show any updates
+        } else {
+            alert('❌ Error: ' + result.error);
+        }
+    } catch (error) {
+        console.error('Error scanning page:', error);
+        alert('❌ Error during page scan');
+    } finally {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }
+}
+
+// Remove duplicate pages on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const pageCards = document.querySelectorAll('.page-card');
+    const seenUrls = new Set();
+    
+    pageCards.forEach(card => {
+        const urlLink = card.querySelector('.website-link');
+        if (urlLink) {
+            let url = urlLink.href;
+            
+            // Normalize URL - remove trailing slash for comparison
+            let normalizedUrl = url.replace(/\/$/, '');
+            
+            // If we've seen this normalized URL before, hide this card
+            if (seenUrls.has(normalizedUrl)) {
+                card.style.display = 'none';
+                console.log('Hiding duplicate:', url);
+            } else {
+                seenUrls.add(normalizedUrl);
+            }
+        }
+    });
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+  if (DOMAIN === 'youtube.com' || DOMAIN.endsWith('.youtube.com') || DOMAIN === 'youtu.be') {
+    const pagesListElement = document.querySelector('.pages-list');
+    if (pagesListElement) pagesListElement.classList.add('hide-for-youtube');
+
+    const addSiteLinkButton = document.querySelector('button[onclick="showAddLinkModal()"]');
+    if (addSiteLinkButton) addSiteLinkButton.classList.add('hide-for-youtube');
+  }
+});
+
+    </script>
+</body>
+</html>

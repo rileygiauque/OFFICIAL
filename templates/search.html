@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profiles - Compliance Scanner</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+.issue-badge {
+    margin-left: auto;
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 12px;
+    background: #d4edda; /* green default */
+    color: #155724;
+}
+
+.issue-badge.warning {
+    background: #f8d7da; /* light red */
+    color: #dc3545;
+}
+
+
+.floating-illustration {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 300px;
+    height: auto;
+    opacity: 0.15;
+    z-index: -1;
+    pointer-events: none;
+    animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-15px); }
+}
+@media (max-width: 768px) {
+    .floating-illustration {
+        width: 200px;
+        top: 10px;
+        right: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .floating-illustration {
+        display: none;
+    }
+}
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 12px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .logout-btn {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 12px 20px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.logout-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+        .main-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .page-title {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 16px;
+            color: #fff;
+        }
+
+        .page-subtitle {
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 40px;
+        }
+
+        .search-controls {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+
+        .search-bar {
+            flex: 1;
+            max-width: 400px;
+            padding: 16px 20px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 1rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .search-bar::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .search-bar:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .filter-btn {
+            padding: 12px 24px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .filter-btn.active,
+        .filter-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .profiles-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .profile-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: #333;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .profile-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+            background: rgba(255, 255, 255, 1);
+        }
+
+        .profile-avatar {
+            width: 64px;
+            height: 64px;
+            background: #e9ecef;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #6c757d;
+            flex-shrink: 0;
+        }
+
+        .profile-info {
+            flex: 1;
+            text-align: left;
+        }
+
+        .profile-name {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 4px;
+        }
+
+        .profile-firm {
+            font-size: 1rem;
+            color: #6c757d;
+            margin-bottom: 4px;
+        }
+
+        .profile-crd {
+            font-size: 0.9rem;
+            color: #007bff;
+            font-weight: 500;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .empty-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.6;
+        }
+
+        .empty-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .empty-subtitle {
+            font-size: 1rem;
+            margin-bottom: 30px;
+        }
+
+        .add-profile-btn {
+            display: inline-block;
+            padding: 16px 32px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 600;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .add-profile-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        @media (max-width: 768px) {
+            .page-title {
+                font-size: 2.5rem;
+            }
+
+            .search-controls {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .search-bar {
+                max-width: 100%;
+            }
+
+            .profile-card {
+                padding: 20px;
+                gap: 16px;
+            }
+
+            .profile-avatar {
+                width: 56px;
+                height: 56px;
+                font-size: 20px;
+            }
+
+            .profile-name {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<img src="static/illustration.png" alt="Compliance Dashboard" class="floating-illustration">
+    <div class="header">
+    <a href="/good" class="back-btn">← Back to Scanner</a>
+    <button class="logout-btn" onclick="handleLogout()" id="logoutBtn">Logout</button>
+</div>
+
+    <div class="main-content">
+        <h1 class="page-title">My Profiles</h1>
+        <p class="page-subtitle">All firms and advisors you've added</p>
+
+        <div class="search-controls">
+            <input type="text" class="search-bar" placeholder="Search firms or advisors..." id="searchInput">
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn" data-filter="advisors">Advisors</button>
+                <button class="filter-btn" data-filter="firms">Firms</button>
+            </div>
+        </div>
+
+        <div class="profiles-container" id="profilesContainer">
+            {% if advisors %}
+                {% for advisor in advisors %}
+<a href="/user-profile-details-view?advisor_id={{ advisor[0] }}" class="profile-card" onclick="{% if advisor[0] > 10000 %}initializeBulkAdvisorProfiles({{ advisor[0] - 10000 }}){% else %}initializeAdvisorProfiles({{ advisor[0] }}){% endif %}" 
+   data-name="{{ advisor[1] }}" 
+   data-firm="{{ advisor[2] }}"
+   data-type="{% if advisor[1] == advisor[2] %}firm{% else %}advisor{% endif %}">
+    <div class="profile-avatar">
+        {% if advisor[1] == advisor[2] %}🏢{% else %}👤{% endif %}
+    </div>
+    <div class="profile-info">
+        <div class="profile-name">{{ advisor[1] }}</div>
+        {% if advisor[1] == advisor[2] %}
+            <div class="profile-firm">{{ advisor[4] }}</div>
+        {% else %}
+            <div class="profile-firm">{{ advisor[2] }}</div>
+        {% endif %}
+        {% if advisor[3] and advisor[3] != 'null' %}
+            <div class="profile-crd">CRD: #{{ advisor[3] }}</div>
+        {% endif %}
+    </div>
+    <div class="issue-badge {% if issue_counts.get(advisor[0], 0) > 0 %}warning{% endif %}">
+        {{ issue_counts.get(advisor[0], 0) }}
+    </div>
+</a>
+{% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-icon">📋</div>
+                    <div class="empty-title">No profiles yet</div>
+                    <div class="empty-subtitle">Start by scanning your first advisor or firm</div>
+                    <a href="/good" class="add-profile-btn">Add Your First Profile</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+async function handleLogout() {
+    if (confirm('Are you sure you want to logout?')) {
+        try {
+            await fetch('/api/logout', { method: 'POST' });
+            window.location.href = '/good';
+        } catch (error) {
+            console.error('Logout error:', error);
+            window.location.href = '/good';
+        }
+    }
+}
+
+// Remove the handleBackToScanner function - just use regular href navigation
+
+async function updateLoginUI() {
+    const auth = await fetch('/api/check-auth').then(r => r.json());
+    const logoutBtn = document.getElementById('logoutBtn');
+    
+    if (auth.authenticated) {
+        logoutBtn.textContent = auth.username;
+        logoutBtn.title = 'Click to logout';
+    } else {
+        // If not authenticated, redirect to /good
+        window.location.href = '/good';
+    }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updateLoginUI();
+});
+
+        // Search functionality
+        const searchInput = document.getElementById('searchInput');
+        const profileCards = document.querySelectorAll('.profile-card');
+        const filterButtons = document.querySelectorAll('.filter-btn');
+
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            
+            profileCards.forEach(card => {
+                const name = card.dataset.name.toLowerCase();
+                const firm = card.dataset.firm.toLowerCase();
+                const matches = name.includes(searchTerm) || firm.includes(searchTerm);
+                
+                card.style.display = matches ? 'flex' : 'none';
+            });
+        });
+
+        // Filter functionality
+filterButtons.forEach(btn => {
+    btn.addEventListener('click', function() {
+        // Update active button
+        filterButtons.forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        
+        const filter = this.dataset.filter;
+        
+        profileCards.forEach(card => {
+            const cardType = card.dataset.type;
+            
+            if (filter === 'all') {
+                card.style.display = 'flex';
+            } else if (filter === 'advisors') {
+                card.style.display = cardType === 'advisor' ? 'flex' : 'none';
+            } else if (filter === 'firms') {
+                card.style.display = cardType === 'firm' ? 'flex' : 'none';
+            }
+        });
+    });
+});
+
+function initializeBulkAdvisorProfiles(advisorId) {
+    // Check if this advisor has bulk-uploaded profiles in the database
+    fetch(`/api/get-advisor-profiles/${advisorId}`)
+        .then(response => response.json())
+        .then(data => {
+            const key = `selectedProfiles_${advisorId}`;
+            if (data.success && data.profiles && data.profiles.length > 0) {
+                // Store the bulk profiles in localStorage
+                localStorage.setItem(key, JSON.stringify(data.profiles));
+                
+                // Store current scan data
+                localStorage.setItem('currentScan', JSON.stringify({
+                    advisor_id: advisorId,
+                    firm_name: data.advisor_name,
+                    timestamp: Date.now()
+                }));
+            } else if (!localStorage.getItem(key)) {
+                // Initialize empty if no profiles found
+                localStorage.setItem(key, '[]');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading advisor profiles:', error);
+            // Fallback to empty initialization
+            const key = `selectedProfiles_${advisorId}`;
+            if (!localStorage.getItem(key)) {
+                localStorage.setItem(key, '[]');
+            }
+        });
+}
+
+// Keep the old function for backward compatibility
+function initializeAdvisorProfiles(advisorId) {
+    initializeBulkAdvisorProfiles(advisorId);
+}
+    </script>
+</body>
+</html>

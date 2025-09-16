@@ -1,0 +1,3896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Compliance Scanner</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+/* Add this to your good.html <style> section */
+.header-buttons {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    gap: 12px;
+    z-index: 1000;
+}
+
+.header-btn {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.header-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Update existing login-button styles if needed */
+.login-button {
+    /* Remove this entire rule since we're replacing it */
+}
+
+@media (max-width: 768px) {
+    .header-buttons {
+        top: 10px;
+        right: 10px;
+        gap: 8px;
+    }
+    
+    .header-btn {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+    }
+}
+
+.crd-number {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #151716;
+  margin-top: 4px;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px 40px; /* Increased padding */
+  color: #6b7280;
+  border: 2px dashed #cbd5e1; /* Added dotted border */
+  border-radius: 12px; /* Rounded corners */
+  margin: 20px 0; /* Add some margin */
+  background: #f8fafc; /* Light background */
+}
+
+.empty-state img {
+  width: 160px;
+  height: 160px;
+  margin-bottom: 24px;
+  opacity: 0.7;
+}
+
+.empty-state h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #374151;
+}
+
+.empty-state p {
+  font-size: 1rem;
+  line-height: 1.5;
+  margin-bottom: 0; /* Remove bottom margin */
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.selection-error-message {
+  animation: fadeIn 0.3s ease;
+}
+
+.advisor-name-bold {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 8px;
+}
+
+.firm-name-below {
+  font-size: 1rem;
+  font-weight: 400;
+  color: #6b7280;
+  margin: 0;
+}
+
+.selected-platform-input {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.selected-platform-input .selected-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+
+.add-page-btn {
+  background: #f8fafc;
+  border: 2px dashed #cbd5e1;
+  color: #64748b;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.add-page-btn:hover {
+  background: #f1f5f9;
+  border-color: #2563eb;
+  color: #2563eb;
+  transform: translateY(-1px);
+}
+
+
+/* Simple platform selector - first step */
+.platform-selector-simple {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.platform-selector-simple .platform-icon {
+  width: 50px;
+  height: 50px;
+  opacity: 1;
+  transition: transform 0.2s ease;
+  border: none;
+}
+
+.platform-selector-simple .platform-icon:hover {
+  transform: scale(1.15);
+  opacity: 1;
+  border: none;
+}
+
+/* Input step */
+.profile-input-step {
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 16px 0;
+  display: none;
+  position: relative;
+}
+
+.profile-input-step.show {
+  display: block;
+  animation: fadeIn 0.3s ease;
+}
+
+.close-x {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #6b7280;
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.close-x:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.input-prompt {
+  text-align: center;
+  margin-bottom: 16px;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.profile-input-dynamic {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  margin-bottom: 12px;
+}
+
+.profile-input-dynamic:focus {
+  outline: none;
+  border-color: #2563eb;
+}
+
+.add-profile-submit-dynamic {
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  width: 100%;
+  display: none;
+}
+
+.add-profile-submit-dynamic.show {
+  display: block;
+}
+
+.add-profile-submit-dynamic:hover {
+  background: #059669;
+}
+
+.new-profile-box {
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 12px 0;
+  display: none;
+}
+
+.new-profile-box.show {
+  display: block;
+  animation: fadeIn 0.3s ease;
+}
+
+.platform-selector {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  justify-content: center;
+}
+
+.platform-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.platform-icon:hover,
+.platform-icon.selected {
+  opacity: 1;
+  border-color: #2563eb;
+  transform: scale(1.1);
+}
+
+.profile-input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-size: 0.95rem;
+}
+
+.profile-input:focus {
+  outline: none;
+  border-color: #2563eb;
+}
+
+.add-profile-submit {
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  margin-right: 8px;
+}
+
+.add-profile-submit:hover {
+  background: #059669;
+}
+
+.add-profile-cancel {
+  background: #6b7280;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.add-profile-cancel:hover {
+  background: #4b5563;
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #2563eb;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-left: 8px;
+}
+
+.idk-option {
+  text-align: center;
+  margin-top: 15px;
+  font-size: 0.9rem;
+  color: #6b7280;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.idk-option:hover {
+  color: #374151;
+}
+
+
+.profiles-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 20px;
+  text-align: left;
+}
+
+.profile-card {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  background: #f9fafb;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+}
+
+.profile-thumb {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.profile-info strong {
+  font-size: 1rem;
+  color: #111827;
+}
+
+.profile-info p {
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin: 4px 0 0;
+}
+
+
+/* Enhanced Social Profiles Modal */
+.social-card {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  background: #ffffff;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+}
+
+.social-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+  border-color: #2563eb; /* Changed to blue */
+}
+
+.social-card img {
+  width: 50px;
+  height: 50px;
+  border-radius: 8px;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.social-card:hover img {
+  transform: scale(1.1);
+}
+
+.social-card .social-info {
+  flex: 1;
+  min-width: 0; /* Allows flex item to shrink below content size */
+}
+
+.social-card strong {
+  font-size: 1rem;
+  color: #111827;
+  font-weight: 600;
+}
+
+.social-card p {
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin-top: 4px;
+  word-break: break-all; /* Breaks long URLs */
+  overflow-wrap: break-word; /* Alternative breaking method */
+  line-height: 1.4;
+}
+
+/* Blue checkmark styling */
+.social-card .checkmark {
+  width: 24px;
+  height: 24px;
+  background: #10b981; /* Green checkmarks */
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  transition: all 0.3s ease;
+}
+
+.social-card .checkmark::after {
+  content: '✓';
+  color: white;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.social-card.deselected .checkmark {
+  background: #d1d5db;
+}
+
+.social-card.deselected .checkmark::after {
+  content: '';
+}
+
+.social-card.deselected {
+  
+}
+
+/* Subtitle styling */
+.deselect-subtitle {
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.9rem;
+  font-weight: 400;
+  margin-bottom: 16px;
+  font-style: italic;
+}
+
+/* Add Profile button styling */
+.add-profile-btn {
+  background: #f8fafc;
+  border: 2px dashed #cbd5e1;
+  color: #64748b;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin: 16px auto;
+  display: block;
+}
+
+.add-profile-btn:hover {
+  background: #f1f5f9;
+  border-color: #2563eb;
+  color: #2563eb;
+  transform: translateY(-1px);
+}
+
+/* Enhanced button styling */
+.confirm-btn {
+  padding: 16px 40px;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 1.1rem;
+  cursor: pointer;
+  background: #2563eb;
+  color: white;
+  transition: all 0.3s ease;
+  min-width: 140px;
+}
+
+.confirm-btn:hover {
+  background: #1d4ed8;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
+}
+
+/* Input styling for missing platforms */
+.social-card input {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  transition: border-color 0.3s ease;
+}
+
+.social-card input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.confirmation-modal,
+.professionals-modal,
+.manual-entry-modal {
+  display: none;
+  position: absolute !important; /* ✅ Force fixed positioning */
+  top: 55% !important; /* ✅ Force the vertical position */
+  left: 8% !important; /* ✅ Force the horizontal position */
+  transform: translateY(-50%) !important; /* ✅ Force the transform */
+  width: 90%;
+  max-width: 450px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  padding: 32px;
+  z-index: 1000;
+  opacity: 1 !important;
+  color: #333;
+  text-align: center;
+}
+
+/* ✅ Add this to force display when shown */
+.confirmation-modal[style*="display: block"],
+.professionals-modal[style*="display: block"],
+.manual-entry-modal[style*="display: block"] {
+  display: block !important;
+}
+
+.confirmation-modal.fade-in,
+.professionals-modal.fade-in,
+.manual-entry-modal.fade-in {
+  opacity: 1;
+  transition: opacity 0.6s ease;
+}
+
+/* ✅ For larger screens, position more precisely */
+@media (min-width: 1024px) {
+  .confirmation-modal,
+  .professionals-modal,
+  .manual-entry-modal {
+    left: 10%;
+    top: 55%; /* ✅ Change this to 55% too */
+    max-width: 550px;
+  }
+}
+
+/* ✅ For smaller screens, center it */
+@media (max-width: 768px) {
+  .confirmation-modal,
+  .professionals-modal,
+  .manual-entry-modal {
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 95%;
+  }
+}
+
+
+.firm-info {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin: 20px 0;
+  text-align: left;
+}
+
+.firm-logo {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+.firm-details h3 {
+  margin: 0 0 10px 0;
+  color: #1e3a5f;
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  margin-top: 30px;
+}
+
+.confirm-btn {
+  padding: 12px 30px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  background: #2563eb;
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.confirm-btn:hover {
+  background: #1e40af;
+  transform: translateY(-2px);
+}
+
+.confirm-btn.secondary {
+  background: #6b7280;
+}
+
+.confirm-btn.secondary:hover {
+  background: #4b5563;
+}
+
+.professionals-list {
+  max-height: 300px;
+  overflow-y: auto;
+  margin: 20px 0;
+  text-align: left;
+}
+
+.professional-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+.professional-item input[type="checkbox"] {
+  margin: 0;
+}
+
+#manualEntryForm {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+#manualEntryForm input {
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+/* Login button styles */
+.login-button {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  z-index: 1000;
+}
+
+.login-button:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+
+/* Animate hero image to center */
+.hero-image {
+  width: 100%; 
+  max-width: 550px; 
+   animation: float 6s ease-in-out infinite;
+  /* Slower transition - change from 0.8s to whatever you prefer */
+  transition: all 2.5s ease;
+}
+
+.hero-image.centered-image {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(1.2);
+  z-index: 9999;
+  animation: none;
+  max-width: 350px;
+}
+
+/* Loading overlay */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(30, 58, 95, 0.95);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+  z-index: 10000;
+}
+
+.loading-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.spinner {
+  width: 70px;
+  height: 70px;
+  border: 6px solid rgba(255, 255, 255, 0.3);
+  border-top: 6px solid #fff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+.loading-text {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+
+.footprint {
+  position: absolute;
+  width: 60px;
+  opacity: 0;
+  animation: fadeInOutFoot 1.2s ease forwards; /* 11s total */
+}
+
+@keyframes fadeInOutFoot {
+  0% { opacity: 0; transform: scale(0.8); }
+  5% { opacity: 0.08; transform: scale(1); } /* Fade in quickly */
+  85% { opacity: 0.08; } /* Stay visible for ~9s */
+  100% { opacity: 0; } /* Fade out */
+}
+
+/* Wave pattern (Top Left → Bottom Right, no rotation change) */
+.step1  { top: 5%;   left: 3%;  animation-delay: 0.2s; }
+.step2  { top: 12%;  left: 8%;  animation-delay: 0.9s; }
+.step3  { top: 20%;  left: 14%; animation-delay: 1.6s; }
+.step4  { top: 28%;  left: 20%; animation-delay: 2.3s; }
+.step5  { top: 36%;  left: 26%; animation-delay: 3.0s; }
+.step6  { top: 44%;  left: 32%; animation-delay: 3.7s; }
+.step7  { top: 52%;  left: 38%; animation-delay: 4.4s; }
+.step8  { top: 60%;  left: 44%; animation-delay: 5.1s; }
+.step9  { top: 68%;  left: 50%; animation-delay: 5.8s; }
+.step10 { top: 74%;  left: 56%; animation-delay: 6.5s; }
+.step11 { top: 80%;  left: 62%; animation-delay: 7.2s; }
+.step12 { top: 86%;  left: 68%; animation-delay: 7.9s; }
+.step13 { top: 91%;  left: 74%; animation-delay: 8.6s; }
+.step14 { top: 95%;  left: 80%; animation-delay: 9.3s; }
+.step15 { top: 98%;  left: 86%; animation-delay: 10.0s; }
+.step16 { top: 100%; left: 92%; animation-delay: 10.7s; }
+
+
+
+
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #1e3a5f;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      height: 100vh;
+    }
+
+.highlight {
+  background-color: yellow;
+  padding: 2px 4px;
+  border-radius: 4px; /* optional for a softer look */
+}
+
+
+.fade-out {
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.fade-in {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.fadeOutLeft {
+  animation: fadeOutLeft 0.6s ease forwards;
+}
+
+.fadeInRight {
+  animation: fadeInRight 0.6s ease forwards;
+}
+
+.fadeOutDown {
+  animation: fadeOutDown 0.6s ease forwards;
+}
+
+@keyframes fadeOutLeft {
+  0% { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(-60px); }
+}
+
+@keyframes fadeInRight {
+  0% { opacity: 0; transform: translateX(60px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fadeOutDown {
+  0% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(60px); }
+}
+
+
+.multi-hint {
+  font-size: 0.9rem;
+  color: #6b7280; /* subtle gray */
+  text-align: center;
+  margin-bottom: 15px;
+  opacity: 0;
+  transform: translateY(-5px);
+  animation: fadeIn 0.8s ease forwards;
+  animation-delay: 0.3s;
+  font-style: italic;
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; transform: translateY(-5px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+
+
+    .hero-section {
+      position: relative;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 1200px;
+      width: 100%;
+      gap: 60px;
+    }
+
+    .text-content { flex: 1; max-width: 520px; }
+    .main-headline {
+      font-size: clamp(2.5rem, 5vw, 3.5rem);
+      font-weight: 800;
+      margin-bottom: 1.2rem;
+      animation: slideInLeft 0.9s ease forwards;
+    }
+    .subtitle-group { margin-bottom: 2.5rem; animation: slideInLeft 1.1s ease forwards; animation-delay: 0.3s; }
+    .subtitle { font-size: 1.2rem; color: rgba(255,255,255,0.9); }
+
+    .check-options {
+      display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: flex-start;
+    }
+
+    .check-button {
+      background: #2563eb; color: #fff; border: none;
+      padding: 1.2rem 2.2rem; border-radius: 14px;
+      font-size: 1.1rem; font-weight: 600;
+      cursor: pointer; transition: all 0.3s ease;
+      min-width: 195px;
+      Min-height: 65px;
+      width: auto;
+    }
+    .check-button:hover { background: linear-gradient(135deg,#1e40af,#2563eb); transform: scale(1.05); }
+
+    .search-container {
+  display: none; 
+  width: 100%; 
+  max-width: 480px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px; /* more breathing space */
+  margin-top: 1.5rem;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.search-container.animate-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+    .search-form {
+  display: flex;
+  flex-direction: column; /* stack elements */
+  width: 100%;
+  gap: 16px;
+}
+.search-button {
+  width: 100%; /* full width button below inputs */
+}
+.search-input + .search-input {
+  margin-top: 12px; /* Adjust the value for more/less space */
+}
+
+.search-input {
+  width: 100%;
+  border-radius: 12px;
+  border: 2px solid #ddd;
+  padding: 18px 20px;
+  font-size: 1.05rem;
+  outline: none;
+  transition: border-color 0.3s ease;
+}
+
+.search-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 6px rgba(37, 99, 235, 0.3);
+}
+
+.search-button {
+  width: 100%;
+  padding: 18px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.search-button:hover {
+  background: #1e40af;
+  transform: translateY(-2px);
+}
+
+
+    /* Platform Selection */
+    .platform-container {
+  display: none;
+  margin: 2rem auto 0;
+  background: #fff;
+  color: #374151;
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+  max-width: 600px;
+  animation: popIn 0.5s ease forwards;
+}
+
+.platform-container h3 {
+  margin-bottom: 15px;
+  font-size: 1.3rem;
+  font-weight: 700;
+  text-align: center;
+  color: #111827;
+}
+
+.platform-grid {
+  display: flex;
+  gap: 30px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 15px;
+}
+
+.platform-card {
+  background: #f9fafb;
+  width: 150px;
+  height: 150px;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.3s ease, background 0.3s ease;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.platform-card img {
+  width: 55px;
+  height: 55px;
+  margin-bottom: 10px;
+}
+
+.platform-card span {
+  font-weight: 600;
+  color: #374151;
+  font-size: 1rem;
+}
+
+.platform-card:hover {
+  transform: translateY(-8px) scale(1.05);
+  background: #eef2ff;
+}
+
+.platform-card.selected {
+  background: #2563eb;
+  color: #fff;
+  transform: scale(1.08);
+  box-shadow: 0 8px 20px rgba(37,99,235,0.3);
+}
+
+.platform-card.selected span {
+  color: #fff;
+}
+
+.platform-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.platform-container::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.06; /* very subtle */
+  z-index: 0;
+  pointer-events: none;
+}
+
+.platform-container.firm-bg::before {
+  background-image: url('static/firm-icon.png'); /* Replace with actual firm image */
+}
+
+
+.platform-container * {
+  position: relative;
+  z-index: 1; /* ensures content stays above the overlay */
+}
+
+
+.enter-button {
+  margin-top: 25px;
+  width: 100%;
+  padding: 14px;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.enter-button.active {
+  opacity: 1;
+}
+
+.enter-button:hover:enabled {
+  transform: translateY(-3px);
+}
+
+    .visual-content { flex: 1; display: flex; justify-content: center; align-items: center; }
+    
+    /* Animations */
+    @keyframes slideInLeft { 0%{opacity:0;transform:translateX(-40px);}100%{opacity:1;transform:translateX(0);} }
+    @keyframes popIn { 0%{opacity:0;transform:scale(0.95);}100%{opacity:1;transform:scale(1);} }
+    @keyframes float { 0%,100%{transform:translateY(0);}50%{transform:translateY(-10px);} }
+  
+
+/* Container for the Add Page section */
+#addProfileSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+}
+
+/* Subtitle */
+#selectPlatformTitle {
+  font-size: 0.95rem;
+  color: #6b7280;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+/* Icon row */
+.platform-selector-simple {
+  display: flex;
+  gap: 40px;  /* Increased from 20px */
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 10px 0;  /* Reduced from 20px 0 */
+}
+
+.platform-selector-simple .platform-icon {
+  width: 70px;  /* Increased from 48px */
+  height: 70px; /* Increased from 48px */
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  opacity: 0.8;
+}
+
+.platform-selector-simple .platform-icon:hover {
+  transform: scale(1.15);
+  opacity: 1;
+}
+
+/* Input + icon row after selection */
+.selected-platform-input {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 12px;
+}
+
+.selected-platform-input .input-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.selected-platform-input .selected-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.selected-platform-input .profile-input-dynamic {
+  flex: 1;
+  padding: 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+
+.selected-platform-input .profile-input-dynamic:focus {
+  outline: none;
+  border-color: #2563eb;
+}
+
+/* Add Profile button */
+#addProfileSubmitDynamic {
+  background: #10b981;
+  color: #fff;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  width: 100%;
+}
+
+#addProfileSubmitDynamic:hover {
+  background: #059669;
+}
+
+#socialProfilesModal {
+  display: none; /* Hidden by default */
+}
+#socialProfilesModal.show {
+  display: block; /* Show only when class added */
+}
+
+/* Professional animations for social cards */
+.social-card {
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.social-card.hidden {
+  opacity: 0;
+  transform: translateY(-10px);
+  pointer-events: none;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Also hide headings and paragraphs completely */
+h3.hidden, p.hidden {
+  opacity: 0;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.social-card.new-card {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: slideInProfessional 0.6s ease forwards;
+}
+
+.checkmark.new-achievement {
+  animation: checkmarkAppear 0.8s ease forwards;
+  animation-delay: 0.3s;
+}
+
+@keyframes slideInProfessional {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes checkmarkAppear {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+#addProfileSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0; /* Remove gap */
+  padding: 0; /* Remove padding */
+  margin: -20px -20px 0 -20px; /* Counteract modal padding */
+}
+
+#addProfileSubtitle {
+  /* Remove all the !important declarations */
+  display: block;
+  opacity: 1;
+  visibility: visible;
+  height: auto;
+  margin: -20px 0 40px 0;
+  padding: 0;
+  overflow: visible;
+}
+
+.selected-platform-input-enhanced {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  position: relative;
+}
+
+/* Add Profile Button Hover */
+#addProfileSubmitDynamic:hover {
+  background: #059669;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+}
+
+#addProfileSubmitDynamic:active {
+  transform: translateY(0);
+}
+
+/* Container Box Hover */
+.selected-platform-input-enhanced .contained-box {
+  transition: all 0.3s ease;
+}
+
+.selected-platform-input-enhanced .contained-box:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+  transform: translateY(-2px);
+}
+
+/* X button hover inside the box */
+.contained-box button[onclick="resetPlatformSelection()"]:hover {
+  background: #f3f4f6;
+  color: #4b5563;
+  transform: scale(1.2); /* ✅ Add this line */
+}
+
+/* Back button hover */
+button[onclick="goBackToProfiles()"]:hover {
+  transform: scale(1.2);
+  color: #4b5563;
+}
+
+.platform-error-message {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; transform: translateY(-10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.social-card .profile-url {
+  color: #6b7280;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.social-card .profile-url:hover {
+  color: #374151;
+  text-decoration: underline;
+}
+
+.social-card .profile-url:visited {
+  color: #6b7280; /* Keep the same gray color even after visiting */
+}
+
+</style>
+</head>
+<body>
+<div class="header-buttons">
+    <button class="header-btn" id="myProfilesBtn" onclick="viewMyProfiles()" style="display: none;">My Profiles</button>
+    <button class="header-btn login-btn" id="loginBtn" onclick="handleLogin()">Login</button>
+</div>
+  <main class="hero-section">
+    <div class="text-content">
+      <h1 class="main-headline">Scan Your Digital Footprint for Compliance Issues</h1>
+      <div class="subtitle-group">
+        <p class="subtitle">Compliance Software for Financial Professionals</p>
+        <p class="subtitle">Exposing Potential Risks Across Online Content</p>
+      </div>
+
+      <div class="check-options">
+        <button class="check-button" onclick="showForm('firm')">Check Firm</button>
+        <button class="check-button" onclick="showForm('advisor')">Check Advisor</button>
+<button class="check-button" onclick="showBulkUpload()">Bulk Upload</button>
+
+        <!-- <button class="check-button" onclick="showForm('both')">Check Both</button> -->
+      </div>
+
+      <div class="search-container" id="searchContainer">
+  <form class="search-form" onsubmit="handleScan(event)">
+    <div id="dynamicInputs">
+      <!-- Inputs will be dynamically injected here by JS -->
+    </div>
+    <button type="submit" class="search-button">Next</button>
+  </form>
+</div>
+
+
+      <div class="platform-container" id="platformContainer">
+        <h3 id="platformQuestion"></h3>
+<p class="multi-hint">You can select more than one platform</p>
+        <div class="platform-grid" id="platformGrid">
+          <div class="platform-card" data-platform="linkedin">
+            <img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" alt="LinkedIn">
+            <span>LinkedIn</span>
+          </div>
+          <div class="platform-card" data-platform="twitter">
+            <img src="https://cdn-icons-png.flaticon.com/512/5968/5968958.png" alt="Twitter">
+            <span>X/Twitter</span>
+          </div>
+          <div class="platform-card" data-platform="facebook">
+            <img src="https://cdn-icons-png.flaticon.com/512/733/733547.png" alt="Facebook">
+            <span>Facebook</span>
+          </div>
+          <div class="platform-card" data-platform="website">
+  <img src="https://cdn-icons-png.flaticon.com/512/1006/1006771.png" alt="Website">
+  <span>Website</span>
+</div>
+
+        </div>
+<p class="idk-option" onclick="selectIDK()">I don't know</p>
+        <button class="enter-button" id="enterButton" disabled>Enter</button>
+      </div>
+
+    </div>
+
+
+
+    <div class="visual-content">
+      <img src="static/illustration.png" alt="Compliance Dashboard Illustration" class="hero-image">
+    </div>
+
+  </main>
+
+
+  <script>
+let placeholderInterval;
+let selectedOption = null;
+let step = 0;
+let selectedPlatforms = [];
+
+// Function to send queued site notification
+async function sendQueuedSiteNotification(advisorName, siteName, siteUrl, platform) {
+    try {
+        const response = await fetch('/notify-queued-site', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                advisor_name: advisorName,
+                site_name: siteName,
+                site_url: siteUrl,
+                platform: platform
+            })
+        });
+        
+        if (response.ok) {
+            console.log('✅ Queued site notification sent');
+        } else {
+            console.log('❌ Failed to send queued site notification');
+        }
+    } catch (error) {
+        console.error('Error sending notification:', error);
+    }
+}
+
+// Override localStorage.setItem to detect when queued sites are added
+(function() {
+    const originalSetItem = localStorage.setItem;
+    localStorage.setItem = function(key, value) {
+        // Check if this is a selectedProfiles update
+        if (key.startsWith('selectedProfiles_')) {
+            console.log('🔍 DEBUGGING LOCALSTORAGE WRITE:');
+            console.log('- Key:', key);
+            console.log('- Raw value:', value);
+            
+            const advisorId = key.replace('selectedProfiles_', '');
+            const oldProfiles = JSON.parse(localStorage.getItem(key) || '[]');
+            const newProfiles = JSON.parse(value || '[]');
+            
+            console.log('- Old profiles count:', oldProfiles.length);
+            console.log('- New profiles count:', newProfiles.length);
+            console.log('- New profiles:', newProfiles);
+            
+            // Find newly added profiles
+            const addedProfiles = newProfiles.filter(newProfile => 
+                !oldProfiles.some(oldProfile => oldProfile.url === newProfile.url)
+            );
+            
+            console.log('- Added profiles:', addedProfiles);
+            
+            const websiteProfiles = addedProfiles.filter(p => p.platform === 'website');
+            if (websiteProfiles.length > 0) {
+                console.log('🌐 WEBSITE PROFILES DETECTED!', websiteProfiles);
+            }
+            
+            // Send notification for each new profile
+            addedProfiles.forEach(profile => {
+                console.log('🔔 PROCESSING ADDED PROFILE:', {
+                    platform: profile.platform,
+                    name: profile.name,
+                    url: profile.url,
+                    isWebsite: profile.platform === 'website'
+                });
+
+                // ✅ Get advisor name from currentScan data (available in good.html)
+                const currentScan = JSON.parse(localStorage.getItem('currentScan') || '{}');
+                let advisorName = 'Unknown Advisor';
+                
+                if (currentScan.firm_name) {
+                    advisorName = currentScan.firm_name;
+                } else if (window.currentFirmData) {
+                    // Fallback to the firm data that was set during the scan process
+                    advisorName = window.currentFirmData.advisorName || 
+                                window.currentFirmData.name || 
+                                window.currentFirmData.firm_name || 
+                                'Unknown Advisor';
+                }
+                
+                console.log('✅ Using advisor name from scan data:', advisorName);
+                
+                // ✅ SPECIAL LOGGING FOR WEBSITE PLATFORMS
+                if (profile.platform === 'website') {
+                    console.log('🌐 WEBSITE PLATFORM DETECTED - Sending notification');
+                }
+                
+                sendQueuedSiteNotification(
+                    advisorName,
+                    profile.name,
+                    profile.url,
+                    profile.platform
+                );
+            });
+        }
+        
+        // Call the original setItem
+        originalSetItem.apply(this, arguments);
+    };
+})();
+
+// Check if we should show add profile interface on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const showAddProfile = localStorage.getItem('showAddProfile');
+    
+    if (showAddProfile) {
+        // Clear the flag
+        localStorage.removeItem('showAddProfile');
+        
+        // Hide the main content but keep the body layout structure
+        document.querySelector('.hero-section').style.display = 'flex';
+        
+        // Hide the text content but keep the visual content (illustration)
+        document.querySelector('.text-content').style.display = 'none';
+        
+        // Make sure the illustration is visible and positioned correctly
+        const visualContent = document.querySelector('.visual-content');
+        visualContent.style.display = 'flex';
+        visualContent.style.justifyContent = 'flex-end';
+        visualContent.style.alignItems = 'center';
+        
+        // Show the social profiles modal with add profile interface directly
+        setTimeout(() => {
+            document.getElementById('socialProfilesModal').classList.add('show');
+            showSimplePlatformSelector();
+        }, 500);
+    }
+    
+    updateLoginUI();
+});
+
+function selectIDK() {
+  selectedPlatforms = []; // ✅ No platforms selected
+  proceedToNextStep();    // Move forward to loading and confirmation
+}
+
+// Add this function to debug storage
+function debugStoredProfiles() {
+    const currentUser = localStorage.getItem('currentUser');
+    const userProfiles = JSON.parse(localStorage.getItem(`userProfiles_${currentUser}`) || '[]');
+    
+    console.log('=== STORED PROFILES DEBUG ===');
+    console.log('Current user:', currentUser);
+    console.log('Total profiles:', userProfiles.length);
+    
+    userProfiles.forEach((profile, index) => {
+        console.log(`Profile ${index + 1}:`, {
+            name: profile.name,
+            type: profile.type,
+            firm: profile.firm,
+            advisor_id: profile.advisor_id,
+            originalData: profile.originalData
+        });
+    });
+}
+
+// Call this in browser console after scanning: debugStoredProfiles()
+
+function showSelectionError() {
+  // Remove any existing error message
+  const existingError = document.querySelector('.selection-error-message');
+  if (existingError) {
+    existingError.remove();
+  }
+  
+  // Create error message
+  const errorDiv = document.createElement('div');
+  errorDiv.className = 'selection-error-message';
+  errorDiv.style.cssText = `
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin: 16px 0;
+    font-size: 0.9rem;
+    text-align: center;
+    animation: fadeIn 0.3s ease;
+    font-weight: 500;
+  `;
+  errorDiv.textContent = 'You must select profiles to continue.';
+  
+  // Insert before the modal buttons
+  const modalButtons = document.querySelector('#socialProfilesModal .modal-buttons');
+  modalButtons.parentNode.insertBefore(errorDiv, modalButtons);
+  
+  // Auto-remove after 5 seconds
+  setTimeout(() => {
+    if (errorDiv.parentNode) {
+      errorDiv.remove();
+    }
+  }, 5000);
+  
+  // Add shake animation to the continue button
+  const continueBtn = document.querySelector('#socialProfilesModal .confirm-btn');
+  continueBtn.style.animation = 'shake 0.5s ease';
+  setTimeout(() => {
+    continueBtn.style.animation = '';
+  }, 500);
+}
+
+function idkInSocialModal() {
+  // Only allowed on firm flow
+  if (selectedOption !== 'firm') return;
+  window.forceNoProfiles = true;  // temporarily bypass selection requirement
+  confirmSocialProfiles();
+  window.forceNoProfiles = false;
+}
+
+function showStep(currentEl, nextEl) {
+  currentEl.classList.add('slide-out');
+  setTimeout(() => {
+    currentEl.style.display = 'none';
+    currentEl.classList.remove('slide-out');
+    
+    nextEl.style.display = 'block';
+    nextEl.classList.add('slide-in');
+    
+    setTimeout(() => nextEl.classList.remove('slide-in'), 500);
+  }, 500);
+}
+
+
+
+function showRegister() {
+    document.getElementById('modalTitle').textContent = 'Create Account';
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('registerForm').style.display = 'block';
+    document.getElementById('errorMsg').style.display = 'none';
+    document.getElementById('regUsername').focus();
+}
+
+function showLogin() {
+    document.getElementById('modalTitle').textContent = 'Login';
+    document.getElementById('loginForm').style.display = 'block';
+    document.getElementById('registerForm').style.display = 'none';
+    document.getElementById('errorMsg').style.display = 'none';
+    document.getElementById('username').focus();
+}
+
+
+
+async function handleLogin() {
+    const auth = await fetch('/api/check-auth').then(r => r.json());
+    
+    if (auth.authenticated) {
+        if (confirm(`Logged in as ${auth.username}. Logout?`)) {
+            await fetch('/api/logout', {method: 'POST'});
+            updateLoginUI();
+        }
+    } else {
+        showLoginModal();
+    }
+}
+
+
+
+async function processLogin() {
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+    
+    if (!username || !password) {
+        showError('Please enter username and password');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username, password})
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            document.querySelector('div[style*="position: fixed"]').remove();
+            updateLoginUI();
+            alert(`Welcome back, ${data.username}!`);
+        } else {
+            showError(data.error);
+        }
+    } catch (error) {
+        showError('Login failed. Please try again.');
+    }
+}
+
+async function processRegister() {
+    const username = document.getElementById('regUsername').value.trim();
+    const password = document.getElementById('regPassword').value.trim();
+    
+    if (!username || !password) {
+        showError('Please enter username and password');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/register', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username, password})
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert('Account created! You can now login.');
+            showLogin();
+        } else {
+            showError(data.error);
+        }
+    } catch (error) {
+        showError('Registration failed. Please try again.');
+    }
+}
+
+function showError(message) {
+    const errorDiv = document.getElementById('errorMsg');
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+}
+
+function showLoginModal() {
+    const modal = document.createElement('div');
+    modal.innerHTML = `
+        <div style="position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 2000; display: flex; align-items: center; justify-content: center;" onclick="this.remove()">
+            <div style="background: white; padding: 2rem; border-radius: 12px; width: 90%; max-width: 400px; color: #333;" onclick="event.stopPropagation()">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h3 id="modalTitle">Login</h3>
+                    <button onclick="this.closest('div[style*=\"position: fixed\"]').remove()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">×</button>
+                </div>
+                
+                <div id="errorMsg" style="display: none; background: #fef2f2; color: #dc2626; padding: 10px; border-radius: 6px; margin-bottom: 1rem; font-size: 0.9rem;"></div>
+                
+                <div id="loginForm">
+                    <input type="text" id="username" placeholder="Username" style="width: 100%; padding: 12px; margin-bottom: 1rem; border: 2px solid #e5e7eb; border-radius: 8px;">
+                    <input type="password" id="password" placeholder="Password" style="width: 100%; padding: 12px; margin-bottom: 1rem; border: 2px solid #e5e7eb; border-radius: 8px;">
+                    <button onclick="processLogin()" style="width: 100%; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-bottom: 1rem;">Login</button>
+                    <div style="text-align: center; font-size: 0.9rem; color: #6b7280;">
+                        Don't have an account? <a href="#" onclick="showRegister()" style="color: #2563eb; text-decoration: none;">Create one</a>
+                    </div>
+                </div>
+                
+                <div id="registerForm" style="display: none;">
+                    <input type="text" id="regUsername" placeholder="Username" style="width: 100%; padding: 12px; margin-bottom: 1rem; border: 2px solid #e5e7eb; border-radius: 8px;">
+                    <input type="password" id="regPassword" placeholder="Password (min 6 chars)" style="width: 100%; padding: 12px; margin-bottom: 1rem; border: 2px solid #e5e7eb; border-radius: 8px;">
+                    <button onclick="processRegister()" style="width: 100%; padding: 12px; background: #10b981; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-bottom: 1rem;">Create Account</button>
+                    <div style="text-align: center; font-size: 0.9rem; color: #6b7280;">
+                        Already have an account? <a href="#" onclick="showLogin()" style="color: #2563eb; text-decoration: none;">Login</a>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    document.body.appendChild(modal);
+    document.getElementById('username').focus();
+}
+
+async function updateLoginUI() {
+    const auth = await fetch('/api/check-auth').then(r => r.json());
+    const loginBtn = document.getElementById('loginBtn');
+    const myProfilesBtn = document.getElementById('myProfilesBtn');
+    
+    if (auth.authenticated) {
+        loginBtn.textContent = auth.username;
+        loginBtn.title = 'Click to logout';
+        if (myProfilesBtn) myProfilesBtn.style.display = 'block';
+    } else {
+        loginBtn.textContent = 'Login';
+        loginBtn.title = 'Click to login';
+        if (myProfilesBtn) myProfilesBtn.style.display = 'none';
+    }
+}
+
+
+async function viewMyProfiles() {
+    const auth = await fetch('/api/check-auth').then(r => r.json());
+    if (!auth.authenticated) {
+        alert('Please login first.');
+        showLoginModal();
+        return;
+    }
+    
+    window.location.href = '/search';  // Changed from 'search.html' to '/search'
+}
+
+// Add login modal styles
+const loginModalStyles = `
+<style>
+.login-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(30, 58, 95, 0.95);
+    backdrop-filter: blur(5px);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.login-modal.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.login-form {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    width: 90vw;
+    max-width: 400px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    color: #1a202c;
+    position: relative;
+}
+
+.login-form h3 {
+    margin-bottom: 1.5rem;
+    text-align: center;
+    color: #1a202c;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #374151;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #2563eb;
+}
+
+.login-submit {
+    width: 100%;
+    padding: 12px;
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.login-submit:hover {
+    background: #1e40af;
+}
+
+.login-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #6b7280;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.login-close:hover {
+    background: #f3f4f6;
+}
+</style>`;
+
+// Inject login modal styles into document head
+if (!document.getElementById('loginModalStyles')) {
+    const styleEl = document.createElement('div');
+    styleEl.id = 'loginModalStyles';
+    styleEl.innerHTML = loginModalStyles;
+    document.head.appendChild(styleEl);
+}
+
+// Update login UI on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updateLoginUI();
+});
+
+function confirmFirm(isCorrect) {
+  const modal = document.getElementById('confirmationModal');
+  modal.style.display = 'none';
+  modal.classList.remove('active', 'fade-in');
+
+  if (isCorrect) {
+    showSocialProfilesModal(); // ✅ Add this line
+  } else {
+    showManualEntryModal();
+  }
+}
+
+function confirmAdvisor(isCorrect) {
+  const modal = document.getElementById('confirmationModal');
+  modal.style.display = 'none';
+  modal.classList.remove('active', 'fade-in');
+
+  if (isCorrect) {
+    showSocialProfilesModal(); // Show the same social profiles modal
+  } else {
+    showManualEntryModal(); // Or show manual entry for advisor
+  }
+}
+
+
+
+function showProfessionalsModal() {
+  const professionalsList = document.getElementById('professionalsList');
+  const advisors = window.currentFirmData?.advisors || [];
+  
+  professionalsList.innerHTML = '';
+  
+  advisors.forEach((advisor, index) => {
+    const item = document.createElement('div');
+    item.className = 'professional-item';
+    item.innerHTML = `
+      <input type="checkbox" id="advisor${index}" value="${advisor}">
+      <label for="advisor${index}">${advisor}</label>
+    `;
+    professionalsList.appendChild(item);
+  });
+  
+  document.getElementById('professionalsModal').style.display = 'block';
+}
+
+function showManualEntryModal() {
+  document.getElementById('manualEntryModal').style.display = 'block';
+}
+
+function selectProfessionals() {
+  const checkboxes = document.querySelectorAll('#professionalsList input[type="checkbox"]:checked');
+  const selectedProfessionals = Array.from(checkboxes).map(cb => cb.value);
+  
+  fetch('/select-professionals', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({professionals: selectedProfessionals})
+  });
+  
+  document.getElementById('professionalsModal').style.display = 'none';
+  alert('Scan complete! Selected professionals: ' + selectedProfessionals.join(', '));
+}
+
+function skipProfessionals() {
+  document.getElementById('professionalsModal').style.display = 'none';
+  alert('Scan complete!');
+}
+
+function showFirmConfirmation() {
+  console.log('DEBUG: selectedOption =', selectedOption);
+  console.log('DEBUG: window.currentFirmData =', window.currentFirmData);
+  
+  if (window.currentFirmData) {
+    // Check if this is advisor data or firm data
+    if (selectedOption === 'advisor') {
+  const imgEl = document.getElementById('firmLogo');
+  imgEl.alt = 'Advisor photo';
+  imgEl.src = 'static/avatar-placeholder.png';
+  imgEl.onerror = () => { imgEl.src = 'static/avatar-placeholder.png'; };
+
+  // Create the new layout for advisor name (bold) and firm name below
+const firmDetails = document.querySelector('.firm-details');
+const crdNumber = window.currentFirmData?.crd_number;
+const crdHTML = crdNumber ? `<div class="crd-number"><strong>CRD: #${crdNumber}</strong></div>` : '';
+
+firmDetails.innerHTML = `
+  <div class="advisor-name-bold">${window.currentFirmData?.advisorName || window.currentFirmData?.name || 'Unknown Advisor'}</div>
+  <div class="firm-name-below">${window.currentFirmData?.firmName || window.currentFirmData?.firm || 'Unknown Firm'}</div>
+  ${crdHTML}
+`;
+  
+  document.querySelector('.confirmation-modal h2').textContent = 'Is this the advisor you are looking for?';
+
+  // Make sure clicks go to confirmAdvisor
+  try {
+    const yesBtn = document.querySelector('.confirm-btn[onclick="confirmFirm(true)"]');
+    const noBtn = document.querySelector('.confirm-btn[onclick="confirmFirm(false)"]');
+    if (yesBtn) yesBtn.setAttribute('onclick', 'confirmAdvisor(true)');
+    if (noBtn) noBtn.setAttribute('onclick', 'confirmAdvisor(false)');
+  } catch (e) {
+    console.warn('Button rewire failed:', e);
+  }
+
+  // Advisor photo fetch logic...
+  const payload = {
+    advisorName: window.currentFirmData?.name || '',
+    firmName: window.currentFirmData?.firm || '',
+    firmWebsite: window.currentFirmData?.website || ''
+  };
+  
+  fetch('/advisor-photo', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload)
+  })
+  .then(res => res.json().catch(() => ({})))
+  .then(data => {
+    if (data && data.success && data.photo) {
+      imgEl.src = data.photo;
+    }
+  })
+  .catch(err => {
+    console.error('/advisor-photo failed', err);
+  });
+} else {
+  // Reset for firm case - restore original structure
+const firmDetails = document.querySelector('.firm-details');
+const location = window.currentFirmData.location;
+const locationHTML = (location && location !== 'Not found') ? 
+  `<p id="locationLabel"><strong>Location:</strong> <span id="firmLocation">${location}</span></p>` : 
+  '';
+
+firmDetails.innerHTML = `
+  <h3 id="firmName">${window.currentFirmData.name || 'Unknown Firm'}</h3>
+  ${locationHTML}
+`;
+  
+  // Extract domain from website
+const firmWebsite = window.currentFirmData.website || '';
+const domain = firmWebsite.replace(/^https?:\/\/(www\.)?/, '').split('/')[0];
+
+const firmLogo = document.getElementById('firmLogo');
+
+// Try Clearbit first, fallback to backend logo if it fails
+if (domain) {
+  const clearbitUrl = `https://logo.clearbit.com/${domain}`;
+  firmLogo.src = clearbitUrl;
+  
+  // If Clearbit fails, use the backend logo
+  firmLogo.onerror = () => {
+    const backendLogo = window.currentFirmData.logo || 'https://via.placeholder.com/80';
+    firmLogo.src = backendLogo;
+    firmLogo.onerror = null; // Prevent infinite loop
+  };
+} else {
+  // No domain, use backend logo directly
+  firmLogo.src = window.currentFirmData.logo || 'https://via.placeholder.com/80';
+}
+  
+  // Reset to firm buttons
+  const yesBtn = document.querySelector('.confirm-btn[onclick="confirmAdvisor(true)"]');
+  const noBtn = document.querySelector('.confirm-btn[onclick="confirmAdvisor(false)"]');
+  if (yesBtn) yesBtn.setAttribute('onclick', 'confirmFirm(true)');
+  if (noBtn) noBtn.setAttribute('onclick', 'confirmFirm(false)');
+}
+    
+    // Remove the centered positioning
+    document.querySelector('.hero-image').classList.remove('centered-image');
+    
+    const modal = document.getElementById('confirmationModal');
+    modal.style.display = 'block';
+    
+    setTimeout(() => {
+      modal.classList.add('fade-in');
+    }, 50);
+  }
+}
+
+// ADD this function to good.html
+function clearPreviousScan() {
+  localStorage.removeItem('currentScan');
+  localStorage.removeItem('quickScanAdvisorId');  
+  localStorage.removeItem('quickScanWebsite');
+}
+
+function handleScan(e) {
+  e.preventDefault();
+
+  // ADD THIS DEBUG LINE RIGHT HERE:
+  console.log('🔥 handleScan called! selectedOption:', selectedOption);
+
+  // Clear any previous scan data
+  clearPreviousScan();
+
+  let formData = {};
+
+  if (selectedOption === 'firm') {
+    const firmWebsite = document.getElementById('firmWebsite').value.trim();
+    if (!firmWebsite || !/^(https?:\/\/)?(www\.)?[a-z0-9-]+\.[a-z]{2,}$/i.test(firmWebsite)) {
+      alert('Please enter a valid firm website (e.g., www.example.com)');
+      return;
+    }
+
+    // ADD THIS LINE TO STORE THE WEBSITE:
+    console.log('💾 DEBUG: Storing website:', firmWebsite);
+    window.enteredWebsite = firmWebsite;
+    console.log('💾 DEBUG: Stored website confirmed:', window.enteredWebsite);
+
+    formData = { type: 'firm', website: firmWebsite };
+  } else if (selectedOption === 'advisor') {
+    const advisorName = document.getElementById('advisorName').value.trim();
+    const firmName = document.getElementById('firmName').value.trim();
+
+    if (!advisorName || !firmName) {
+      alert('Please enter both the advisor name and the firm/broker dealer name.');
+      return;
+    }
+    formData = { type: 'advisor', advisorName, firmName };
+  } else if (selectedOption === 'both') {
+    const firmWebsite = document.getElementById('firmWebsite').value.trim();
+    if (!firmWebsite) {
+      alert('Please enter a valid firm website.');
+      return;
+    }
+    formData = { type: 'both', website: firmWebsite };
+  }
+
+  // Send to backend
+  console.log('Sending data:', formData);
+  
+  fetch('/process-scan', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(formData)
+  })
+  .then(response => {
+    console.log('Response status:', response.status);
+    return response.json();
+  })
+  .then(data => {
+    console.log('Received data:', data);
+    window.currentFirmData = data;
+    console.log('Set currentFirmData to:', window.currentFirmData);
+
+    // ADD THIS BACKGROUND SCAN CODE HERE:
+    if (selectedOption === 'firm' && window.enteredWebsite) {
+      console.log('🚀 Starting background scan from handleScan for:', window.enteredWebsite);
+      
+      fetch('/scan-and-check-compliance', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          website: window.enteredWebsite,
+          selectedPlatforms: selectedPlatforms || []
+        })
+      })
+      .then(response => response.json())
+      .then(scanData => {
+        console.log('📡 Background scan result:', scanData);
+        if (scanData.success) {
+          const currentScan = {
+            advisor_id: scanData.advisor_id,
+            website: window.enteredWebsite,
+            firm_name: scanData.firm_name,
+            timestamp: Date.now()
+          };
+          
+          localStorage.setItem('currentScan', JSON.stringify(currentScan));
+          console.log('✅ Background scan complete:', scanData.firm_name, 'ID:', scanData.advisor_id);
+          
+          if (scanData.reused_existing) {
+            console.log('♻️ Reused existing scan with', scanData.issue_count, 'issues');
+          } else {
+            console.log('🆕 Started new scan');
+          }
+        }
+      })
+      .catch(error => {
+        console.error('❌ Background scan error:', error);
+      });
+    }
+
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    // Create fallback data for testing
+    window.currentFirmData = {
+      name: 'Test Firm LLC',
+      location: 'New York, NY',
+      brokerDealer: 'Test Broker Dealer',
+      advisors: ['John Doe', 'Jane Smith'],
+      logo: 'https://via.placeholder.com/80'
+    };
+  });
+
+  document.getElementById('searchContainer').style.display = 'none';
+  showPlatformStep();
+}
+
+async function showForm(type) {
+  const auth = await fetch('/api/check-auth').then(r => r.json());
+  if (!auth.authenticated) {
+    alert('Please login first to use the scanner.');
+    showLoginModal();
+    return;
+  }
+
+  selectedOption = type;
+  console.log('🎯 showForm called with type:', type, 'selectedOption is now:', selectedOption);
+  step = 0;
+  selectedPlatforms = [];
+
+  document.querySelector('.check-options').style.display = 'none';
+
+  const searchContainer = document.getElementById('searchContainer');
+  searchContainer.style.display = 'flex';
+
+  setTimeout(() => {
+    searchContainer.classList.add('animate-in');
+  }, 50);
+
+  const dynamicInputs = document.getElementById('dynamicInputs');
+  dynamicInputs.innerHTML = '';
+
+  if (type === 'firm') {
+    dynamicInputs.innerHTML = `
+      <input type="text" id="firmWebsite" class="search-input" placeholder="Enter your firm's website..." aria-label="Firm Website">
+    `;
+
+  } else if (type === 'advisor') {
+    dynamicInputs.innerHTML = `
+      <input type="text" id="advisorName" class="search-input" placeholder="Enter First & Last Name" aria-label="Advisor Name">
+      <input type="text" id="firmName" class="search-input" placeholder="Enter Firm" aria-label="Firm Name">
+    `;
+  } else if (type === 'both') {
+    dynamicInputs.innerHTML = `
+      <input type="text" id="firmWebsite" class="search-input" placeholder="Enter your firm's website..." aria-label="Firm Website">
+    `;
+  }
+}
+
+function cyclePlaceholders(input, placeholders) {
+  let i = 0;
+  input.placeholder = placeholders[i];
+  placeholderInterval = setInterval(() => {
+    i = (i + 1) % placeholders.length;
+    input.placeholder = placeholders[i];
+  }, 2500);
+}
+
+function showPlatformStep() {
+  const container = document.getElementById('platformContainer');
+  const question = document.getElementById('platformQuestion');
+  const enterBtn = document.getElementById('enterButton');
+
+  document.querySelector('.main-headline').classList.add('fade-out');
+  document.querySelector('.subtitle-group').classList.add('fade-out');
+
+  setTimeout(() => {
+    document.querySelector('.main-headline').style.display = 'none';
+    document.querySelector('.subtitle-group').style.display = 'none';
+
+    container.style.display = 'block';
+    container.classList.add('fade-in');
+
+    container.classList.remove('firm-bg', 'advisor-bg');
+
+    if (selectedOption === 'firm') {
+      question.innerHTML = 'Which platform does the FIRM have a known profile on?';
+      container.classList.add('firm-bg');
+    } else if (selectedOption === 'advisor') {
+      question.innerHTML = 'Which platform does the ADVISOR have a known profile on?';
+      container.classList.add('advisor-bg');
+    } else if (selectedOption === 'both') {
+      if (step === 0) {
+        question.innerHTML = 'Which platform does the FIRM have a known profile on?';
+        container.classList.add('firm-bg');
+      } else {
+        question.innerHTML = 'Which platform does the ADVISOR have a known profile on?';
+        container.classList.add('advisor-bg');
+      }
+    }
+
+    enterBtn.disabled = true;
+    enterBtn.classList.remove('active');
+  }, 500);
+}
+
+function showSocialProfilesModal() {
+  console.log('=== showSocialProfilesModal CALLED ===');
+  
+  const modal = document.getElementById('socialProfilesModal');
+  const container = document.getElementById('socialProfilesContainer');
+  container.innerHTML = '';
+
+  const profiles = window.currentFirmData.socialMedia || {};
+
+// HEREEEE
+
+// ✅ ADD THIS ENTIRE BLOCK HERE:
+console.log('=== SOCIAL PROFILES DEBUG ===');
+console.log('All profiles found:', window.currentFirmData.socialMedia);
+Object.keys(profiles).forEach(platform => {
+  if (profiles[platform]) {
+    console.log(`Platform: ${platform}, URL: ${profiles[platform]}`);
+    if (platform.includes('youtube') || platform.includes('Youtube_')) {
+      console.log('🔴 FOUND AUTO-GENERATED YOUTUBE:', platform);
+      console.log('🔴 URL:', profiles[platform]);
+    }
+  }
+});
+
+  // Check if no profiles were found at all
+const hasSelectedFound = selectedPlatforms.some(p => profiles[p]);
+const hasExtraFound = Object.keys(profiles).some(p => !selectedPlatforms.includes(p) && profiles[p]);
+const hasCandidates = window.currentFirmData.twitterCandidates && window.currentFirmData.twitterCandidates.length > 0;
+
+if (!hasSelectedFound && !hasExtraFound && !hasCandidates) {
+  // Show empty state
+  const emptyState = document.createElement('div');
+  emptyState.className = 'empty-state';
+  emptyState.innerHTML = `
+    <img src="static/hand.png" alt="No profiles found">
+    <h3>We couldn't find any profiles</h3>
+    <p>Are there any you would like to add?</p>
+  `;
+  container.appendChild(emptyState);
+  
+  // Simple Add Profile section (initially hidden)
+  const addProfileSection = document.createElement('div');
+  addProfileSection.id = 'addProfileSection';
+  addProfileSection.style.display = 'none';
+  addProfileSection.innerHTML = `
+    <button onclick="goBackToProfiles()" style="position: absolute; top: 16px; left: 16px; background: none; border: none; color: #6b7280; font-size: 1.2rem; cursor: pointer;">← Back</button>
+    
+    <p id="addProfileSubtitle" style="text-align: center; margin: 20px 0 40px 0; color: #6b7280; font-size: 1rem; font-weight: 500;">Select platform to add new profile</p>
+    
+    <!-- Platform icons -->
+    <div class="platform-selector-simple" id="platformIconRow" style="margin: 0 0 40px 0;">
+      <img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" class="platform-icon" data-platform="linkedin" alt="LinkedIn">
+      <img src="https://cdn-icons-png.flaticon.com/512/5968/5968958.png" class="platform-icon" data-platform="twitter" alt="Twitter">
+      <img src="https://cdn-icons-png.flaticon.com/512/733/733547.png" class="platform-icon" data-platform="facebook" alt="Facebook">
+      <img src="https://cdn-icons-png.flaticon.com/512/1006/1006771.png" class="platform-icon" data-platform="website" alt="Website">
+    </div>
+
+   <!-- Enhanced Selected Platform Input with Box -->
+  <div class="selected-platform-input-enhanced" id="selectedPlatformInput" style="display: none;">
+    
+    <!-- ✅ NEW: Contained Box with X inside -->
+  <div class="contained-box" style="background: #f8fafc; border: 2px solid #e5e7eb; border-radius: 16px; padding: 32px; max-width: 500px; width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: all 0.3s ease; position: relative;">
+    
+    <button onclick="resetPlatformSelection()" style="position: absolute; top: 16px; right: 16px; background: none; border: none; color: #9ca3af; width: 24px; height: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; transition: all 0.2s ease; border-radius: 4px; z-index: 10;">×</button>
+        <div style="text-align: center; margin-bottom: 24px;">
+          <img id="selectedPlatformIcon" src="" alt="Selected Platform" style="width: 80px; height: 80px; margin-bottom: 12px;">
+          <h3 id="selectedPlatformTitle" style="margin: 0; color: #111827; font-size: 1.3rem; font-weight: 600;"></h3>
+        </div>
+        
+        <div style="width: 100%;">
+          <input type="text" id="profileInputDynamic" style="width: 100%; padding: 18px; border: 2px solid #d1d5db; border-radius: 12px; font-size: 1rem; transition: border-color 0.3s ease; background: white;" placeholder="">
+          <button id="addProfileSubmitDynamic" onclick="submitNewProfileSimple()" style="width: 100%; margin-top: 20px; padding: 16px; background: #10b981; color: white; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 600; cursor: pointer; display: none; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);">Add Profile</button>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  container.appendChild(addProfileSection);
+
+  const idkBtn = document.getElementById('socialIdkBtn');
+  if (idkBtn) idkBtn.style.display = (selectedOption === 'firm') ? 'block' : 'none';
+  
+  document.getElementById('socialProfilesModal').classList.add('show');
+  return; // Exit early since there are no profiles to show
+}
+  
+  const platformIcons = {
+    linkedin: 'https://cdn-icons-png.flaticon.com/512/174/174857.png',
+    facebook: 'https://cdn-icons-png.flaticon.com/512/733/733547.png',
+    twitter: 'https://cdn-icons-png.flaticon.com/512/5968/5968958.png',
+    website: 'https://cdn-icons-png.flaticon.com/512/1006/1006771.png'
+  };
+
+
+
+  // 1️⃣ Profiles user selected AND found
+const selectedFound = selectedPlatforms.filter(p => profiles[p]);
+if (selectedFound.length > 0) {
+  const subtitle = document.createElement('p');
+  subtitle.className = 'deselect-subtitle';
+  subtitle.textContent = 'Click to make a selection';
+  container.appendChild(subtitle);
+
+  selectedFound.forEach(platform => {
+    const url = profiles[platform];
+
+    
+
+    const card = document.createElement('div');
+    card.className = 'social-card deselected'; // ✅ Start as deselected
+    card.dataset.platform = platform;
+    // ✅ FIXED: Clean up display names for auto-generated keys
+let displayName;
+if (platform === 'twitter') {
+  displayName = 'X/Twitter';
+} else if (platform.startsWith('website')) {
+  displayName = 'Website';
+} else if (platform.startsWith('linkedin')) {
+  displayName = 'LinkedIn';
+} else if (platform.startsWith('facebook')) {
+  displayName = 'Facebook';
+} else {
+  displayName = platform.charAt(0).toUpperCase() + platform.slice(1);
+}
+
+card.innerHTML = `
+  <img src="${platformIcons[platform.split('_')[0]]}" alt="${platform}">
+  <div class="social-info">
+    <strong>${displayName}</strong>
+    <p><a href="${url}" target="_blank" class="profile-url" onclick="event.stopPropagation()">${url}</a></p>
+  </div>
+  <div class="checkmark"></div>
+`;
+    
+    // Add click handler for selection/deselection
+    card.addEventListener('click', function() {
+      this.classList.toggle('deselected');
+    });
+    
+    container.appendChild(card);
+  });
+}
+
+  // 2️⃣ Missing selected platforms
+  const missing = selectedPlatforms.filter(p => !profiles[p]);
+  if (missing.length > 0) {
+    const msg = document.createElement('p');
+    msg.style.marginTop = '20px';
+    msg.style.marginBottom = '12px';
+    msg.style.fontSize = '0.95rem';
+    msg.style.color = '#6b7280';
+    msg.innerHTML = `We're still looking to match these platforms. Please provide usernames:`;
+    container.appendChild(msg);
+
+    missing.forEach(platform => {
+      const card = document.createElement('div');
+      card.className = 'social-card';
+      card.dataset.platform = platform;
+      // ✅ FIXED: Clean up display names for auto-generated keys
+let displayName;
+if (platform === 'twitter') {
+  displayName = 'X/Twitter';
+} else if (platform.startsWith('website')) {
+  displayName = 'Website';
+} else if (platform.startsWith('linkedin')) {
+  displayName = 'LinkedIn';
+} else if (platform.startsWith('facebook')) {
+  displayName = 'Facebook';
+} else {
+  displayName = platform.charAt(0).toUpperCase() + platform.slice(1);
+}
+
+card.innerHTML = `
+  <img src="${platformIcons[platform.split('_')[0]]}" alt="${platform}">
+  <div class="social-info">
+    <strong>${displayName}</strong>
+    <p><a href="${url}" target="_blank" class="profile-url" onclick="event.stopPropagation()">${url}</a></p>
+  </div>
+  <div class="checkmark"></div>
+`;
+      
+      // Add click handler for deselection
+      card.addEventListener('click', function(e) {
+        if (e.target.tagName !== 'INPUT') {
+          this.classList.toggle('deselected');
+        }
+      });
+      
+      container.appendChild(card);
+    });
+  }
+
+  // 3️⃣ Extra profiles we found (user did NOT select)
+  const extraFound = Object.keys(profiles).filter(p => !selectedPlatforms.includes(p) && profiles[p]);
+  if (extraFound.length > 0) {
+    const extraHeading = document.createElement('h3');
+    if (selectedPlatforms.length === 0) {
+      extraHeading.textContent = 'We found these profiles:';
+    } else {
+      extraHeading.textContent = 'We also found these profiles:';
+    }
+    extraHeading.style.marginTop = '24px';
+    extraHeading.style.marginBottom = '16px';
+    extraHeading.style.color = '#111827';
+    extraHeading.style.fontSize = '1.1rem';
+    extraHeading.style.fontWeight = '600';
+    container.appendChild(extraHeading);
+
+    extraFound.forEach(platform => {
+  const url = profiles[platform];
+  const card = document.createElement('div');
+  card.className = 'social-card deselected'; // ✅ Start as deselected
+  card.dataset.platform = platform;
+  // ✅ FIXED: Clean up display names for auto-generated keys
+let displayName;
+if (platform === 'twitter') {
+  displayName = 'X/Twitter';
+} else if (platform.startsWith('website')) {
+  displayName = 'Website';
+} else if (platform.startsWith('linkedin')) {
+  displayName = 'LinkedIn';
+} else if (platform.startsWith('facebook')) {
+  displayName = 'Facebook';
+} else {
+  displayName = platform.charAt(0).toUpperCase() + platform.slice(1);
+}
+
+card.innerHTML = `
+  <img src="${platformIcons[platform.split('_')[0]]}" alt="${platform}">
+  <div class="social-info">
+    <strong>${displayName}</strong>
+    <p><a href="${url}" target="_blank" class="profile-url" onclick="event.stopPropagation()">${url}</a></p>
+  </div>
+  <div class="checkmark"></div>
+`;
+  
+  // Add click handler for selection/deselection
+  card.addEventListener('click', function() {
+    this.classList.toggle('deselected');
+  });
+  
+  container.appendChild(card);
+});
+  }
+
+
+// Handle Twitter candidates
+if (window.currentFirmData.twitterCandidates && window.currentFirmData.twitterCandidates.length > 0) {
+    const candidatesHeading = document.createElement('h3');
+    candidatesHeading.textContent = 'Select Twitter/X Profile:';
+    candidatesHeading.style.marginTop = '24px';
+    container.appendChild(candidatesHeading);
+    
+    window.currentFirmData.twitterCandidates.forEach((candidate, index) => {
+        const card = document.createElement('div');
+        card.className = 'social-card twitter-candidate deselected';
+        card.dataset.platform = 'twitter';
+        card.dataset.url = candidate.url;
+        // ✅ FIXED: Clean up display names for auto-generated keys
+let displayName;
+if (platform === 'twitter') {
+  displayName = 'X/Twitter';
+} else if (platform.startsWith('website')) {
+  displayName = 'Website';
+} else if (platform.startsWith('linkedin')) {
+  displayName = 'LinkedIn';
+} else if (platform.startsWith('facebook')) {
+  displayName = 'Facebook';
+} else {
+  displayName = platform.charAt(0).toUpperCase() + platform.slice(1);
+}
+
+card.innerHTML = `
+  <img src="${platformIcons[platform.split('_')[0]]}" alt="${platform}">
+  <div class="social-info">
+    <strong>${displayName}</strong>
+    <p><a href="${url}" target="_blank" class="profile-url" onclick="event.stopPropagation()">${url}</a></p>
+  </div>
+  <div class="checkmark"></div>
+`;
+        
+        card.addEventListener('click', function() {
+            // Deselect other Twitter candidates
+            document.querySelectorAll('.twitter-candidate').forEach(c => c.classList.add('deselected'));
+            // Select this one
+            this.classList.toggle('deselected');
+        });
+        
+        container.appendChild(card);
+    });
+}
+
+// Simple Add Profile section (initially hidden)
+const addProfileSection = document.createElement('div');
+addProfileSection.id = 'addProfileSection';
+addProfileSection.style.display = 'none';
+addProfileSection.innerHTML = `
+  <button onclick="goBackToProfiles()" style="position: absolute; top: 16px; left: 16px; background: none; border: none; color: #6b7280; font-size: 1.2rem; cursor: pointer;">← Back</button>
+  
+  <p id="addProfileSubtitle" style="text-align: center; margin: 20px 0 40px 0; color: #6b7280; font-size: 1rem; font-weight: 500;">Select platform to add new profile</p>
+  
+  <!-- Platform icons -->
+  <div class="platform-selector-simple" id="platformIconRow" style="margin: 0 0 40px 0;">
+    <img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" class="platform-icon" data-platform="linkedin" alt="LinkedIn">
+    <img src="https://cdn-icons-png.flaticon.com/512/5968/5968958.png" class="platform-icon" data-platform="twitter" alt="Twitter">
+    <img src="https://cdn-icons-png.flaticon.com/512/733/733547.png" class="platform-icon" data-platform="facebook" alt="Facebook">
+    <img src="https://cdn-icons-png.flaticon.com/512/1006/1006771.png" class="platform-icon" data-platform="website" alt="Website">
+  </div>
+
+ <!-- Enhanced Selected Platform Input with Box -->
+<div class="selected-platform-input-enhanced" id="selectedPlatformInput" style="display: none;">
+  
+  <!-- ✅ NEW: Contained Box with X inside -->
+<div class="contained-box" style="background: #f8fafc; border: 2px solid #e5e7eb; border-radius: 16px; padding: 32px; max-width: 500px; width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: all 0.3s ease; position: relative;">
+  
+  <button onclick="resetPlatformSelection()" style="position: absolute; top: 16px; right: 16px; background: none; border: none; color: #9ca3af; width: 24px; height: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; transition: all 0.2s ease; border-radius: 4px; z-index: 10;">×</button>
+      <div style="text-align: center; margin-bottom: 24px;">
+        <img id="selectedPlatformIcon" src="" alt="Selected Platform" style="width: 80px; height: 80px; margin-bottom: 12px;">
+        <h3 id="selectedPlatformTitle" style="margin: 0; color: #111827; font-size: 1.3rem; font-weight: 600;"></h3>
+      </div>
+      
+      <div style="width: 100%;">
+        <input type="text" id="profileInputDynamic" style="width: 100%; padding: 18px; border: 2px solid #d1d5db; border-radius: 12px; font-size: 1rem; transition: border-color 0.3s ease; background: white;" placeholder="">
+        <button id="addProfileSubmitDynamic" onclick="submitNewProfileSimple()" style="width: 100%; margin-top: 20px; padding: 16px; background: #10b981; color: white; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 600; cursor: pointer; display: none; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);">Add Profile</button>
+      </div>
+    </div>
+  </div>
+`;
+
+container.appendChild(addProfileSection);
+
+// Profile input step (initially hidden)
+const profileInputStep = document.createElement('div');
+profileInputStep.className = 'profile-input-step';
+profileInputStep.id = 'profileInputStep';
+profileInputStep.innerHTML = `
+  <button class="close-x" onclick="hideProfileInput()">×</button>
+  <div class="input-prompt">Paste profile link or username</div>
+  <input type="text" class="profile-input-dynamic" id="profileInputDynamic" placeholder="">
+  <button class="add-profile-submit-dynamic" id="addProfileSubmitDynamic" onclick="submitNewProfileSimple()">Add Profile</button>
+`;
+container.appendChild(profileInputStep);
+
+const idkBtn = document.getElementById('socialIdkBtn');
+if (idkBtn) idkBtn.style.display = (selectedOption === 'firm') ? 'block' : 'none';
+
+  document.getElementById('socialProfilesModal').classList.add('show');
+}
+
+function proceedToNextStep() {
+  const container = document.getElementById('platformContainer');
+  container.classList.remove('fadeInRight', 'fade-in');
+  container.classList.add('fadeOutDown');
+
+  setTimeout(() => {
+    container.style.display = 'none';
+    const heroImage = document.querySelector('.hero-image');
+    const rect = heroImage.getBoundingClientRect();
+
+    heroImage.style.position = 'absolute';
+    heroImage.style.top = rect.top + 'px';
+    heroImage.style.left = rect.left + 'px';
+    heroImage.style.margin = '0';
+    heroImage.offsetHeight;
+
+    setTimeout(() => {
+      heroImage.style.position = '';
+      heroImage.style.top = '';
+      heroImage.style.left = '';
+      heroImage.classList.add('centered-image');
+      const modal = document.getElementById('confirmationModal');
+      modal.classList.add('fade-in');
+    }, 50);
+
+    setTimeout(() => {
+      document.getElementById('loadingOverlay').classList.add('active');
+      // Wait for data to be ready, minimum 4 seconds
+const checkDataReady = () => {
+  if (window.currentFirmData) {
+    document.getElementById('loadingOverlay').classList.remove('active');
+    showFirmConfirmation();
+  } else {
+    setTimeout(checkDataReady, 500);
+  }
+};
+setTimeout(checkDataReady, 4000); // Minimum 4 seconds, then check for data
+    }, 2500);
+  }, 0);
+}
+
+
+function editSocialProfiles() {
+  const inputs = document.querySelectorAll('#socialProfilesContainer input');
+  inputs.forEach(input => {
+    input.addEventListener('change', async (e) => {
+      const newUrl = e.target.value.trim();
+      const platform = e.target.dataset.platform;
+      if (newUrl) {
+        const res = await fetch('/fetch-preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: newUrl })
+        });
+        const data = await res.json();
+        if (!data.error) {
+          e.target.previousElementSibling.innerText = data.url;
+          e.target.closest('.social-card').querySelector('img').src = data.image;
+        }
+      }
+    });
+  });
+}
+
+function confirmSocialProfiles() {
+  // Check if at least one profile is selected (unless user tapped IDK)
+const selectedProfiles = document.querySelectorAll('#socialProfilesContainer .social-card:not(.deselected)');
+if (!window.forceNoProfiles && selectedProfiles.length === 0) {
+  showSelectionError();
+  return;
+}
+  
+  // Collect selected profiles data
+  // Collect selected profiles data
+const profilesData = [];
+
+selectedProfiles.forEach(card => {
+    const platform = card.dataset.platform;
+    const profileUrl = card.dataset.url || card.querySelector('a')?.href || '';
+    const profileName = card.querySelector('strong')?.textContent || '';
+    
+    console.log('🔧 COLLECTING PROFILE:', {
+        platform,
+        profileUrl,
+        profileName,
+        isWebsite: platform === 'website',
+        cardElement: card
+    });
+    
+    if (profileUrl) {
+      const profile = {
+        platform: platform,
+        url: profileUrl,
+        name: profileName
+      };
+      
+      profilesData.push(profile);
+      
+      if (platform === 'website') {
+        console.log('🌐 WEBSITE PROFILE ADDED TO COLLECTION:', profile);
+      }
+    }
+});
+
+console.log('🔧 FINAL PROFILES DATA:', profilesData);
+console.log('🔧 Website profiles in final data:', profilesData.filter(p => p.platform === 'website'));
+  
+  // Add firm website if available (for firm scans)
+  if (window.currentFirmData?.website && selectedOption === 'firm') {
+    profilesData.push({
+      platform: 'website',
+      url: window.currentFirmData.website,
+      name: window.currentFirmData.name || 'Company Website'
+    });
+  }
+
+  // ❌ REMOVE THIS LINE - Don't store here, no advisor_id yet!
+  // storeUserProfile(profilesData);
+  
+  if (selectedOption === 'advisor') {
+    console.log('🔧 Creating advisor record...', window.currentFirmData);
+    
+    const advisorData = {
+      name: window.currentFirmData?.advisorName || window.currentFirmData?.name || 'Unknown',
+      firm: window.currentFirmData?.firmName || window.currentFirmData?.firm || 'Unknown',
+      crd_number: window.currentFirmData?.crd_number
+    };
+    
+    fetch('/create-advisor', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(advisorData)
+    })
+    .then(response => {
+      console.log('🔧 Response status:', response.status);
+      return response.json();
+    })
+    .then(data => {
+      console.log('🔧 Response data:', data);
+      if (data.success) {
+        // ✅ FIRST: Store scan data
+        const currentScan = {
+          advisor_id: data.advisor_id,
+          firm_name: advisorData.name,
+          timestamp: Date.now()
+        };
+        localStorage.setItem('currentScan', JSON.stringify(currentScan));
+        
+        // ✅ NOW: Store user profile with advisor_id available
+        storeUserProfileAsync(profilesData);
+        
+        // Store other data
+        localStorage.setItem('selectedProfiles', JSON.stringify(profilesData));
+        localStorage.setItem('scanType', selectedOption);
+        localStorage.setItem('entityName', advisorData.name);
+        
+        const scanKey = `selectedProfiles_${data.advisor_id}`;
+        localStorage.setItem(scanKey, JSON.stringify(profilesData));
+        
+        console.log('🔧 Stored currentScan:', currentScan);
+        window.location.href = 'new.html';
+      } else {
+        alert('Error creating advisor record: ' + (data.error || 'Unknown error'));
+      }
+    })
+    .catch(error => {
+      console.error('🔧 Error:', error);
+      alert('Error creating advisor record');
+    });
+  } else {
+    // ✅ FIRM LOGIC: Check if currentScan exists, then store
+    const currentScan = JSON.parse(localStorage.getItem('currentScan') || '{}');
+    
+    if (currentScan.advisor_id) {
+    // ✅ Store user profile for firms (after ensuring advisor_id exists)
+    storeUserProfileAsync(profilesData);  // Use the new async version
+} else {
+    console.warn('⚠️ No currentScan data available for firm, cannot store profile');
+}
+    
+    // Existing firm logic
+    localStorage.setItem('selectedProfiles', JSON.stringify(profilesData));
+    localStorage.setItem('scanType', selectedOption);
+    localStorage.setItem('entityName', window.currentFirmData?.name || 'Unknown');
+
+    if (currentScan.advisor_id) {
+      const scanKey = `selectedProfiles_${currentScan.advisor_id}`;
+      localStorage.setItem(scanKey, JSON.stringify(profilesData));
+    }
+    
+    window.location.href = 'new.html';
+  }
+}
+
+async function storeUserProfileAsync(profilesData) {
+    try {
+        // Check server auth status instead of localStorage
+        const auth = await fetch('/api/check-auth').then(r => r.json());
+        
+        if (!auth.authenticated) {
+            if (confirm('Login to save this profile to your account?')) {
+                showLoginModal();
+            }
+            return;
+        }
+        
+        // Use the username from server response
+        const currentUser = auth.username;
+        
+        // Rest of your existing logic (copied from original function)
+        const currentScan = JSON.parse(localStorage.getItem('currentScan') || '{}');
+        console.log('🔧 STORE DEBUG: currentScan at storage time =', currentScan);
+        
+        if (!currentScan.advisor_id) {
+            console.error('❌ No advisor_id found in currentScan, cannot save profile');
+            console.log('Available currentScan data:', currentScan);
+            return;
+        }
+        
+        const userProfiles = JSON.parse(localStorage.getItem(`userProfiles_${currentUser}`) || '[]');
+        
+        const newProfile = {
+            id: Date.now(),
+            type: selectedOption,
+            name: selectedOption === 'advisor' ? 
+                  (window.currentFirmData?.advisorName || window.currentFirmData?.name || 'Unknown') :
+                  (window.currentFirmData?.name || 'Unknown'),
+            firm: selectedOption === 'advisor' ? 
+                  (window.currentFirmData?.firmName || window.currentFirmData?.firm || 'Unknown Firm') :
+                  (window.currentFirmData?.name || 'Firm'),
+            location: window.currentFirmData?.location,
+            website: window.currentFirmData?.website,
+            crd: window.currentFirmData?.crd_number,
+            profiles: profilesData,
+            addedDate: new Date().toISOString(),
+            advisor_id: currentScan.advisor_id,
+            originalData: window.currentFirmData,
+            scanData: currentScan
+        };
+        
+        console.log('🔧 STORING PROFILE WITH GUARANTEED DATA:', {
+            selectedOption,
+            name: newProfile.name,
+            firm: newProfile.firm,
+            advisor_id: newProfile.advisor_id,
+            type: newProfile.type
+        });
+        
+        userProfiles.push(newProfile);
+        localStorage.setItem(`userProfiles_${currentUser}`, JSON.stringify(userProfiles));
+        console.log('✅ New profile entry saved for user:', currentUser);
+        console.log('✅ Profile saved with advisor_id:', newProfile.advisor_id);
+        console.log('✅ Total profiles for user:', userProfiles.length);
+        
+    } catch (error) {
+        console.error('Error in storeUserProfileAsync:', error);
+    }
+}
+
+function storeUserProfile(profilesData) {
+    const currentUser = localStorage.getItem('currentUser');
+    
+    // If not logged in, prompt to login
+    if (!currentUser) {
+        if (confirm('Login to save this profile to your account?')) {
+            showLoginModal();
+        }
+        return;
+    }
+    
+    // ✅ ROBUST FIX: Get currentScan data immediately when storing
+    const currentScan = JSON.parse(localStorage.getItem('currentScan') || '{}');
+    console.log('🔧 STORE DEBUG: currentScan at storage time =', currentScan);
+    
+    // ✅ ROBUST FIX: Ensure we have advisor_id before storing
+    if (!currentScan.advisor_id) {
+        console.error('❌ No advisor_id found in currentScan, cannot save profile');
+        console.log('Available currentScan data:', currentScan);
+        return; // Don't save without advisor_id
+    }
+    
+    // Get existing user profiles
+    const userProfiles = JSON.parse(localStorage.getItem(`userProfiles_${currentUser}`) || '[]');
+    
+    // Create new profile entry
+    const newProfile = {
+        id: Date.now(),
+        type: selectedOption, // 'firm' or 'advisor'
+        
+        // ✅ ROBUST FIX: Better name/firm extraction
+        name: selectedOption === 'advisor' ? 
+              (window.currentFirmData?.advisorName || window.currentFirmData?.name || 'Unknown') :
+              (window.currentFirmData?.name || 'Unknown'),
+              
+        firm: selectedOption === 'advisor' ? 
+              (window.currentFirmData?.firmName || window.currentFirmData?.firm || 'Unknown Firm') :
+              (window.currentFirmData?.name || 'Firm'), // Use firm name for firm type
+              
+        location: window.currentFirmData?.location,
+        website: window.currentFirmData?.website,
+        crd: window.currentFirmData?.crd_number,
+        profiles: profilesData,
+        addedDate: new Date().toISOString(),
+        
+        // ✅ ROBUST FIX: Guaranteed advisor_id extraction
+        advisor_id: currentScan.advisor_id,
+        
+        // Store additional debugging data
+        originalData: window.currentFirmData,
+        scanData: currentScan
+    };
+    
+    console.log('🔧 STORING PROFILE WITH GUARANTEED DATA:', {
+        selectedOption,
+        name: newProfile.name,
+        firm: newProfile.firm,
+        advisor_id: newProfile.advisor_id, // This MUST exist now
+        type: newProfile.type
+    });
+    
+    // Always create new profile entries for each scan session
+userProfiles.push(newProfile);
+localStorage.setItem(`userProfiles_${currentUser}`, JSON.stringify(userProfiles));
+console.log('✅ New profile entry saved for user:', currentUser);
+console.log('✅ Profile saved with advisor_id:', newProfile.advisor_id);
+console.log('✅ Total profiles for user:', userProfiles.length);
+    
+}
+
+function showProfilesConfirmation(socialLinks) {
+  const modal = document.getElementById('profilesConfirmationModal');
+  const previewContainer = document.getElementById('profilesPreview');
+  previewContainer.innerHTML = '';
+
+  const platforms = Object.keys(socialLinks);
+  platforms.forEach(platform => {
+    if (socialLinks[platform]) {
+      fetch('/fetch-preview', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ url: socialLinks[platform] })
+      })
+      .then(res => res.json())
+      .then(meta => {
+        if (meta.error) return;
+
+        const card = document.createElement('div');
+        card.className = 'profile-card';
+        // ✅ FIXED: Clean up display names for auto-generated keys
+let displayName;
+if (platform === 'twitter') {
+  displayName = 'X/Twitter';
+} else if (platform.startsWith('website')) {
+  displayName = 'Website';
+} else if (platform.startsWith('linkedin')) {
+  displayName = 'LinkedIn';
+} else if (platform.startsWith('facebook')) {
+  displayName = 'Facebook';
+} else {
+  displayName = platform.charAt(0).toUpperCase() + platform.slice(1);
+}
+
+card.innerHTML = `
+  <img src="${platformIcons[platform.split('_')[0]]}" alt="${platform}">
+  <div class="social-info">
+    <strong>${displayName}</strong>
+    <p><a href="${url}" target="_blank" class="profile-url" onclick="event.stopPropagation()">${url}</a></p>
+  </div>
+  <div class="checkmark"></div>
+`;
+        previewContainer.appendChild(card);
+      });
+    }
+  });
+
+  modal.style.display = 'block';
+}
+
+
+
+// Platform card selection
+document.querySelectorAll('.platform-card').forEach(card => {
+  card.addEventListener('click', () => {
+    card.classList.toggle('selected');
+    const platform = card.dataset.platform;
+    if (card.classList.contains('selected')) {
+      selectedPlatforms.push(platform);
+    } else {
+      selectedPlatforms = selectedPlatforms.filter(p => p !== platform);
+    }
+    const enterBtn = document.getElementById('enterButton');
+    if (selectedPlatforms.length > 0) {
+      enterBtn.disabled = false;
+      enterBtn.classList.add('active');
+    } else {
+      enterBtn.disabled = true;
+      enterBtn.classList.remove('active');
+    }
+  });
+});
+
+// Enter button click handler
+document.getElementById('enterButton').addEventListener('click', () => {
+  console.log('🔍 DEBUG: Enter button clicked!');
+  console.log('🔍 DEBUG: selectedOption =', selectedOption);
+  console.log('🔍 DEBUG: window.enteredWebsite =', window.enteredWebsite);
+  console.log('🔍 DEBUG: selectedPlatforms =', selectedPlatforms);
+
+  const container = document.getElementById('platformContainer');
+
+  if (selectedOption === 'both' && step === 0) {
+    console.log('🔍 DEBUG: Taking BOTH path, step 0');
+    container.classList.remove('fadeInRight', 'fade-in');
+    container.classList.add('fadeOutLeft');
+
+    setTimeout(() => {
+      container.style.display = 'none';
+      selectedPlatforms = [];
+      document.querySelectorAll('.platform-card').forEach(card => card.classList.remove('selected'));
+
+      step++;
+      document.getElementById('platformQuestion').innerHTML =
+        'Which platform does the ADVISOR have a known profile on?';
+
+      container.classList.remove('firm-bg');
+      container.classList.add('advisor-bg');
+
+      setTimeout(() => {
+        container.style.display = 'block';
+        container.classList.remove('fadeOutLeft');
+        container.classList.add('fadeInRight');
+      }, 100);
+    }, 600);
+  } else {
+    console.log('🔍 DEBUG: Taking ELSE path');
+
+    // Check if this came from "Check Firm" with a website URL
+    const firmWebsite = window.enteredWebsite;
+    console.log('🔍 DEBUG: firmWebsite from storage =', firmWebsite);
+    
+    if (selectedOption === 'firm' && firmWebsite) {
+      console.log('✅ DEBUG: Conditions met - starting background scan');
+      console.log('🚀 Starting background scan for website:', firmWebsite);
+
+      // Background scan for website compliance
+      fetch('/scan-and-check-compliance', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          website: firmWebsite,
+          selectedPlatforms: selectedPlatforms
+        })
+      })
+      .then(response => {
+        console.log('📡 Response status:', response.status);
+        return response.json();
+      })
+      .then(data => {
+        console.log('📡 Response data:', data);
+        if (data.success) {
+          // Store this scan with a unique key
+          const scanData = {
+            advisor_id: data.advisor_id,
+            website: firmWebsite,
+            firm_name: data.firm_name,
+            timestamp: Date.now()
+          };
+          
+          // Get existing scans or create empty array
+          const existingScans = JSON.parse(localStorage.getItem('websiteScans') || '[]');
+          
+          // Remove any existing scan for this website
+          const filteredScans = existingScans.filter(scan => scan.website !== firmWebsite);
+          
+          // Add the new scan
+          filteredScans.push(scanData);
+          
+          // Keep only the last 10 scans to avoid storage issues
+          const recentScans = filteredScans.slice(-10);
+          
+          localStorage.setItem('websiteScans', JSON.stringify(recentScans));
+          
+          // Set current scan as active
+          localStorage.setItem('currentScan', JSON.stringify(scanData));
+          
+          console.log('✅ Background compliance scan started for:', data.firm_name, 'ID:', data.advisor_id);
+        } else {
+          console.error('❌ Background scan failed:', data.error);
+        }
+      })
+      .catch(error => {
+        console.error('❌ Error starting background scan:', error);
+      });
+    } else {
+      console.log('❌ DEBUG: Conditions NOT met');
+      console.log('   - selectedOption === "firm"?', selectedOption === 'firm');
+      console.log('   - firmWebsite exists?', !!firmWebsite);
+    }
+
+    // Continue with existing logic - show loading and then confirmation
+    container.classList.remove('fadeInRight', 'fade-in');
+    container.classList.add('fadeOutDown');
+
+    setTimeout(() => {
+      container.style.display = 'none';
+
+      setTimeout(() => {
+        const heroImage = document.querySelector('.hero-image');
+        const rect = heroImage.getBoundingClientRect();
+        
+        heroImage.style.position = 'absolute';
+        heroImage.style.top = rect.top + 'px';
+        heroImage.style.left = rect.left + 'px';
+        heroImage.style.margin = '0';
+        
+        heroImage.offsetHeight;
+        
+        setTimeout(() => {
+          heroImage.style.position = '';
+          heroImage.style.top = '';
+          heroImage.style.left = '';
+          heroImage.classList.add('centered-image');
+        }, 50);
+
+        setTimeout(() => {
+          document.getElementById('loadingOverlay').classList.add('active');
+          
+          const checkDataReady = () => {
+            console.log('DEBUG: checkDataReady called, currentFirmData:', window.currentFirmData);
+            if (window.currentFirmData) {
+              document.getElementById('loadingOverlay').classList.remove('active');
+              showFirmConfirmation();
+            } else {
+              setTimeout(checkDataReady, 500);
+            }
+          };
+          setTimeout(checkDataReady, 4000);
+        }, 2500);
+
+      }, 0);
+    }, 0);
+  }
+});
+
+// Manual entry form handler - Wait for DOM to be ready
+document.addEventListener('DOMContentLoaded', function() {
+  const manualForm = document.getElementById('manualEntryForm');
+  if (manualForm) {
+    manualForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      const formData = {
+        firmName: document.getElementById('manualFirmName').value,
+        location: document.getElementById('manualLocation').value,
+        brokerDealer: document.getElementById('manualBrokerDealer').value
+      };
+      
+      fetch('/manual-entry', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(formData)
+      });
+      
+      document.getElementById('manualEntryModal').style.display = 'none';
+      alert('Manual entry saved! Scan complete.');
+    });
+  }
+
+  // Add the platform click event delegation here (outside the form handler)
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('platform-icon') && e.target.closest('.platform-selector-simple')) {
+      const platform = e.target.dataset.platform;
+      showProfileInput(platform);
+    }
+  });
+});
+
+let selectedNewPlatform = null;
+
+function showAddProfileBox() {
+  document.getElementById('newProfileBox').classList.add('show');
+  document.querySelector('.add-profile-btn').style.display = 'none';
+}
+
+function hideAddProfileBox() {
+  document.getElementById('newProfileBox').classList.remove('show');
+  document.querySelector('.add-profile-btn').style.display = 'block';
+  selectedNewPlatform = null;
+  document.getElementById('profileInput').value = '';
+  document.querySelectorAll('.platform-icon').forEach(icon => icon.classList.remove('selected'));
+}
+
+// Platform icon selection
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.platform-icon').forEach(icon => {
+    icon.addEventListener('click', function() {
+      document.querySelectorAll('.platform-icon').forEach(i => i.classList.remove('selected'));
+      this.classList.add('selected');
+      selectedNewPlatform = this.dataset.platform;
+      
+      const input = document.getElementById('profileInput');
+      const platformName = selectedNewPlatform === 'twitter' ? 'X/Twitter' : 
+                          selectedNewPlatform.charAt(0).toUpperCase() + selectedNewPlatform.slice(1);
+      input.placeholder = `Enter ${platformName} username or profile URL`;
+    });
+  });
+});
+
+
+
+async function submitNewProfile() {
+  if (!selectedNewPlatform) {
+    alert('Please select a platform first');
+    return;
+  }
+  
+  const profileValue = document.getElementById('profileInput').value.trim();
+  if (!profileValue) {
+    alert('Please enter a username or URL');
+    return;
+  }
+
+  const submitBtn = document.querySelector('.add-profile-submit');
+  const originalText = submitBtn.textContent;
+  submitBtn.innerHTML = 'Verifying...<span class="loading-spinner"></span>';
+  submitBtn.disabled = true;
+
+  try {
+    const response = await fetch('/verify-profile', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        platform: selectedNewPlatform,
+        profileInput: profileValue
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      // Create new profile card
+      const container = document.getElementById('socialProfilesContainer');
+      const newCard = document.createElement('div');
+      newCard.className = 'social-card';
+      newCard.dataset.platform = selectedNewPlatform;
+      
+      const platformIcons = {
+        linkedin: 'https://cdn-icons-png.flaticon.com/512/174/174857.png',
+        facebook: 'https://cdn-icons-png.flaticon.com/512/733/733547.png',
+        twitter: 'https://cdn-icons-png.flaticon.com/512/5968/5968958.png',
+        website: 'https://cdn-icons-png.flaticon.com/512/1006/1006771.png'
+      };
+      
+      const platformName = selectedNewPlatform === 'twitter' ? 'X/Twitter' : 
+                          selectedNewPlatform.charAt(0).toUpperCase() + selectedNewPlatform.slice(1);
+      
+      newCard.innerHTML = `
+        <img src="${platformIcons[selectedNewPlatform]}" alt="${selectedNewPlatform}">
+        <div class="social-info">
+          <strong>${platformName}</strong>
+          <p>${data.url}</p>
+        </div>
+        <div class="checkmark"></div>
+      `;
+      
+      // Add click handler for deselection
+      newCard.addEventListener('click', function() {
+        this.classList.toggle('deselected');
+      });
+      
+      // Insert before the Add Profile button
+      const addBtn = container.querySelector('.add-profile-btn');
+      container.insertBefore(newCard, addBtn);
+      
+      hideAddProfileBox();
+    } else {
+      alert('Profile not found. Please check the username/URL and try again.');
+    }
+  } catch (error) {
+    alert('Error verifying profile. Please try again.');
+    console.error('Verification error:', error);
+  } finally {
+    submitBtn.innerHTML = originalText;
+    submitBtn.disabled = false;
+  }
+}
+
+
+function hideProfileInput() {
+  // Hide input step
+  document.getElementById('profileInputStep').classList.remove('show');
+  
+  // Show platform selector and prompt again
+  document.querySelector('.platform-selector-simple').style.display = 'flex';
+  document.querySelector('.platform-selector-simple').previousElementSibling.style.display = 'block';
+  
+  // Reset
+  selectedNewPlatform = null;
+  document.getElementById('profileInputDynamic').value = '';
+  document.getElementById('addProfileSubmitDynamic').classList.remove('show');
+}
+
+async function submitNewProfileSimple() {
+  const profileValue = document.getElementById('profileInputDynamic').value.trim();
+  if (!profileValue || !selectedNewPlatform) return;
+
+  const submitBtn = document.getElementById('addProfileSubmitDynamic');
+  const originalText = submitBtn.textContent;
+  submitBtn.innerHTML = 'Verifying...<span class="loading-spinner"></span>';
+  submitBtn.disabled = true;
+
+  const existingError = document.querySelector('.platform-error-message');
+  if (existingError) existingError.remove();
+
+  try {
+    const response = await fetch('/verify-profile', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ platform: selectedNewPlatform, profileInput: profileValue })
+    });
+    const data = await response.json();
+    if (!data.success) { showPlatformError(data.error); return; }
+
+    const currentScan = JSON.parse(localStorage.getItem('currentScan') || 'null');
+    const selectedProfiles = JSON.parse(localStorage.getItem('selectedProfiles') || '[]');
+
+    const newProfile = {
+      platform: selectedNewPlatform,
+      url: data.url,
+      name: selectedNewPlatform === 'twitter'
+        ? 'X/Twitter'
+        : selectedNewPlatform.charAt(0).toUpperCase() + selectedNewPlatform.slice(1)
+    };
+
+    // ✅ ADD THIS DEBUG:
+console.log('🔧 CREATED NEW PROFILE:', {
+  platform: newProfile.platform,
+  url: newProfile.url,
+  name: newProfile.name,
+  isWebsite: newProfile.platform === 'website'
+});
+
+    selectedProfiles.push(newProfile);
+    localStorage.setItem('selectedProfiles', JSON.stringify(selectedProfiles));
+    if (currentScan && currentScan.advisor_id) {
+      localStorage.setItem(`selectedProfiles_${currentScan.advisor_id}`, JSON.stringify(selectedProfiles));
+    }
+
+    // Ensure model state and add to in-memory data for immediate UI rebuild
+    if (!window.currentFirmData) window.currentFirmData = {};
+    if (!window.currentFirmData.socialMedia) window.currentFirmData.socialMedia = {};
+    const uniqueKey = `${selectedNewPlatform}_${Date.now()}`;
+    window.currentFirmData.socialMedia[uniqueKey] = data.url;
+
+    // Rebuild selection panel in-place (no redirect)
+showSocialProfilesModal();
+
+// ♻️ Restore selections saved before "Add Page"
+const keep = Array.isArray(window._savedSelection) ? window._savedSelection : [];
+if (keep.length) {
+  document.querySelectorAll('#socialProfilesContainer .social-card').forEach(card => {
+    const id = card.querySelector('a')?.href || card.dataset.platform;
+    if (keep.includes(id)) card.classList.remove('deselected');
+  });
+}
+// we’re done with the snapshot
+window._savedSelection = null;
+
+
+
+    // Ensure buttons are visible and preselect/highlight the new card
+    const modalButtons = document.querySelector('#socialProfilesModal .modal-buttons');
+    if (modalButtons) modalButtons.style.display = 'flex';
+
+    requestAnimationFrame(() => {
+      const newCard = Array.from(document.querySelectorAll('#socialProfilesContainer .social-card'))
+        .find(c => c.querySelector('a')?.href === data.url || c.textContent.includes(data.url));
+      if (newCard) {
+        newCard.classList.remove('deselected');
+        newCard.classList.add('new-card');
+        newCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+  } catch (error) {
+    showPlatformError('Error verifying profile. Please try again.');
+    console.error('Verification error:', error);
+  } finally {
+    submitBtn.innerHTML = originalText;
+    submitBtn.disabled = false;
+  }
+}
+
+// Helper function to create social cards
+function createSocialCard(platform, url, deselected = true) {
+  const card = document.createElement('div');
+  card.className = deselected ? 'social-card deselected' : 'social-card';
+  card.dataset.platform = platform;
+  
+  const platformIcons = {
+    linkedin: 'https://cdn-icons-png.flaticon.com/512/174/174857.png',
+    facebook: 'https://cdn-icons-png.flaticon.com/512/733/733547.png',
+    twitter: 'https://cdn-icons-png.flaticon.com/512/5968/5968958.png',
+    website: 'https://cdn-icons-png.flaticon.com/512/1006/1006771.png'
+  };
+
+  
+  
+  const platformName = platform === 'twitter' ? 'X/Twitter' : 
+                      platform.charAt(0).toUpperCase() + platform.slice(1);
+  
+  // ✅ FIXED: Clean up display names for auto-generated keys
+let displayName;
+if (platform === 'twitter') {
+  displayName = 'X/Twitter';
+} else if (platform.startsWith('website')) {
+  displayName = 'Website';
+} else if (platform.startsWith('linkedin')) {
+  displayName = 'LinkedIn';
+} else if (platform.startsWith('facebook')) {
+  displayName = 'Facebook';
+} else {
+  displayName = platform.charAt(0).toUpperCase() + platform.slice(1);
+}
+
+card.innerHTML = `
+  <img src="${platformIcons[platform.split('_')[0]]}" alt="${platform}">
+  <div class="social-info">
+    <strong>${displayName}</strong>
+    <p><a href="${url}" target="_blank" class="profile-url" onclick="event.stopPropagation()">${url}</a></p>
+  </div>
+  <div class="checkmark"></div>
+`;
+  
+  card.addEventListener('click', function() {
+    this.classList.toggle('deselected');
+  });
+  
+  return card;
+}
+
+// ✅ ADD THIS ENTIRE FUNCTION:
+function showPlatformError(errorMessage) {
+  const platformName = selectedNewPlatform === 'twitter' ? 'X/Twitter' : 
+                      selectedNewPlatform.charAt(0).toUpperCase() + selectedNewPlatform.slice(1);
+  
+  // Check if it's a platform mismatch error
+  let displayMessage;
+  if (errorMessage.includes('Invalid profile format') || errorMessage.includes('not found')) {
+    displayMessage = `Oops! Are you sure that link is for ${platformName}?`;
+  } else {
+    displayMessage = errorMessage;
+  }
+  
+  // Create error message element
+  const errorDiv = document.createElement('div');
+  errorDiv.className = 'platform-error-message';
+  errorDiv.style.cssText = `
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-top: 12px;
+    font-size: 0.9rem;
+    text-align: center;
+    animation: fadeIn 0.3s ease;
+  `;
+  errorDiv.textContent = displayMessage;
+  
+  // Insert after the input field
+  const inputField = document.getElementById('profileInputDynamic');
+  inputField.parentNode.insertBefore(errorDiv, inputField.nextSibling);
+  
+  // Auto-remove after 5 seconds
+  setTimeout(() => {
+    if (errorDiv.parentNode) {
+      errorDiv.remove();
+    }
+  }, 5000);
+}
+
+function showSimplePlatformSelector() {
+
+  // 🧷 Snapshot current selections BEFORE replacing the panel
+window._savedSelection = Array.from(document.querySelectorAll('#socialProfilesContainer .social-card'))
+  .filter(c => !c.classList.contains('deselected'))
+  .map(c => c.querySelector('a')?.href || c.dataset.platform);
+
+  const container = document.getElementById('socialProfilesContainer');
+  
+  // Clear any existing content first
+  container.innerHTML = '';
+  
+  // Create the add profile section directly
+  const addProfileSection = document.createElement('div');
+  addProfileSection.id = 'addProfileSection';
+  addProfileSection.innerHTML = `
+    <button onclick="goBackToAddProfile()" style="position: absolute; top: 16px; left: 16px; background: none; border: none; color: #6b7280; font-size: 1.2rem; cursor: pointer;">← Back</button>
+    
+    
+    <p id="addProfileSubtitle" style="text-align: center; margin: 20px 0 40px 0; color: #6b7280; font-size: 1rem; font-weight: 500;">Select platform to add new profile</p>
+    
+    <!-- Platform icons -->
+    <div class="platform-selector-simple" id="platformIconRow" style="margin: 0 0 40px 0;">
+      <img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" class="platform-icon" data-platform="linkedin" alt="LinkedIn">
+      <img src="https://cdn-icons-png.flaticon.com/512/5968/5968958.png" class="platform-icon" data-platform="twitter" alt="Twitter">
+      <img src="https://cdn-icons-png.flaticon.com/512/733/733547.png" class="platform-icon" data-platform="facebook" alt="Facebook">
+      <img src="https://cdn-icons-png.flaticon.com/512/1006/1006771.png" class="platform-icon" data-platform="website" alt="Website">
+    </div>
+
+    <!-- Input section (initially hidden) -->
+    <div class="selected-platform-input-enhanced" id="selectedPlatformInput" style="display: none;">
+      <div class="contained-box" style="background: #f8fafc; border: 2px solid #e5e7eb; border-radius: 16px; padding: 32px; max-width: 500px; width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: all 0.3s ease; position: relative;">
+        <button onclick="resetPlatformSelection()" style="position: absolute; top: 16px; right: 16px; background: none; border: none; color: #9ca3af; width: 24px; height: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; transition: all 0.2s ease; border-radius: 4px; z-index: 10;">×</button>
+        <div style="text-align: center; margin-bottom: 24px;">
+          <img id="selectedPlatformIcon" src="" alt="Selected Platform" style="width: 80px; height: 80px; margin-bottom: 12px;">
+          <h3 id="selectedPlatformTitle" style="margin: 0; color: #111827; font-size: 1.3rem; font-weight: 600;"></h3>
+        </div>
+        <div style="width: 100%;">
+          <input type="text" id="profileInputDynamic" style="width: 100%; padding: 18px; border: 2px solid #d1d5db; border-radius: 12px; font-size: 1rem; transition: border-color 0.3s ease; background: white;" placeholder="">
+          <button id="addProfileSubmitDynamic" onclick="submitNewProfileSimple()" style="width: 100%; margin-top: 20px; padding: 16px; background: #10b981; color: white; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 600; cursor: pointer; display: none; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);">Add Profile</button>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  container.appendChild(addProfileSection);
+  
+  // Hide the modal buttons since we're in add-only mode
+  const modalButtons = document.querySelector('#socialProfilesModal .modal-buttons');
+  if (modalButtons) {
+    modalButtons.style.display = 'none';
+  }
+}
+
+// Add this new function for the back button
+function goBackToAddProfile() {
+  // Go back to the new.html page
+  window.location.href = 'new.html';
+}
+
+
+function hideAddProfile() {
+  document.getElementById('addProfileSection').style.display = 'none';
+  
+  const addBtn = document.querySelector('.add-profile-btn');
+  if (addBtn) {
+    addBtn.style.display = 'block';
+  }
+  
+  const inputStep = document.getElementById('profileInputStep');
+  if (inputStep.classList.contains('show')) {
+    inputStep.classList.remove('show');
+  }
+  
+  // ✅ ADD THESE LINES - Restore the original title
+  const modalHeader = document.querySelector('#socialProfilesModal h2');
+  modalHeader.textContent = 'Select profiles to check';
+  modalHeader.style.marginBottom = '24px';
+  
+  selectedNewPlatform = null;
+  document.getElementById('profileInputDynamic').value = '';
+  document.getElementById('addProfileSubmitDynamic').classList.remove('show');
+}
+
+
+function showProfileInput(platform) {
+  selectedNewPlatform = platform;
+
+  // Hide subtitle and icon row - ✅ HIDE THE SUBTITLE TOO
+  document.getElementById('addProfileSubtitle').style.display = 'none';
+  document.getElementById('platformIconRow').style.display = 'none';
+
+  // Show selected input wrapper with enhanced styling
+  const inputWrapper = document.getElementById('selectedPlatformInput');
+  const inputField = document.getElementById('profileInputDynamic');
+  const icon = document.getElementById('selectedPlatformIcon');
+
+  // Update icon based on platform
+  const platformIcons = {
+    linkedin: 'https://cdn-icons-png.flaticon.com/512/174/174857.png',
+    twitter: 'https://cdn-icons-png.flaticon.com/512/5968/5968958.png',
+    facebook: 'https://cdn-icons-png.flaticon.com/512/733/733547.png',
+    website: 'https://cdn-icons-png.flaticon.com/512/1006/1006771.png'
+  };
+  icon.src = platformIcons[platform];
+
+  const platformName = platform === 'twitter' ? 'X/Twitter' : platform.charAt(0).toUpperCase() + platform.slice(1);
+  
+  const platformTitle = document.getElementById('selectedPlatformTitle');
+  platformTitle.textContent = `Add your ${platformName} profile`;
+
+  inputField.placeholder = `Enter your ${platformName} username or profile URL`;
+
+  // ✅ CENTER THE INPUT SECTION WITH THE TITLE
+  inputWrapper.style.display = 'flex';
+  inputWrapper.style.marginTop = '40px'; // Reduced to center with title
+  inputWrapper.style.justifyContent = 'center'; // Center horizontally
+
+  inputField.focus();
+
+  inputField.addEventListener('input', function() {
+    const submitBtn = document.getElementById('addProfileSubmitDynamic');
+    submitBtn.style.display = this.value.trim() ? 'block' : 'none';
+  });
+}
+
+function goBackToProfiles() {
+  // Show the empty state again if it exists
+  const emptyState = document.querySelector('.empty-state');
+  if (emptyState) {
+    emptyState.style.display = 'flex';
+  }
+
+  // Show all hidden elements again
+  const hiddenCards = document.querySelectorAll('#socialProfilesContainer .social-card.hidden');
+  const hiddenHeadings = document.querySelectorAll('#socialProfilesContainer h3.hidden');
+  const hiddenSubtitles = document.querySelectorAll('#socialProfilesContainer p.hidden');
+  
+  hiddenCards.forEach(card => card.classList.remove('hidden'));
+  hiddenHeadings.forEach(heading => heading.classList.remove('hidden'));
+  hiddenSubtitles.forEach(subtitle => subtitle.classList.remove('hidden'));
+  
+  // Hide add profile section
+  document.getElementById('addProfileSection').style.display = 'none';
+  
+  // Show Add Page button
+  const addBtn = document.querySelector('.add-page-btn');
+  if (addBtn) {
+    addBtn.style.display = 'block';
+  }
+  
+  // Show Continue button again
+  const continueBtn = document.querySelector('#socialProfilesModal .confirm-btn');
+  if (continueBtn) {
+    continueBtn.style.display = 'block';
+  }
+  
+  // Restore original header
+  const modalHeader = document.querySelector('#socialProfilesModal h2');
+  modalHeader.textContent = 'Select Profiles to Check';
+  modalHeader.style.marginBottom = '0px'; // ✅ Restore original margin
+
+}
+
+function resetPlatformSelection() {
+  // Hide the selected input view
+  document.getElementById('selectedPlatformInput').style.display = 'none';
+  
+  // Show the platform selection again
+  document.getElementById('addProfileSubtitle').style.display = 'block';
+  document.getElementById('platformIconRow').style.display = 'flex';
+  
+  // Reset variables
+  selectedNewPlatform = null;
+  document.getElementById('profileInputDynamic').value = '';
+  document.getElementById('addProfileSubmitDynamic').style.display = 'none';
+}
+
+async function showBulkUpload() {
+    // Check authentication first
+    const auth = await fetch('/api/check-auth').then(r => r.json());
+    if (!auth.authenticated) {
+        alert('Please login first to use bulk upload.');
+        showLoginModal();
+        return;
+    }
+
+    // Create file input element
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.xlsx,.xls,.csv';
+    fileInput.style.display = 'none';
+    
+    fileInput.onchange = function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        // Show loading overlay
+        document.getElementById('loadingOverlay').classList.add('active');
+        
+        fetch('/bulk-upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(`Successfully processed ${data.count} entries from your file. You can now view them in "My Profiles".`);
+                // Redirect to search page to see the uploaded profiles
+                window.location.href = '/search';
+            } else {
+                alert('Error processing file: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Bulk upload error:', error);
+            alert('Error uploading file. Please try again.');
+        })
+        .finally(() => {
+            document.getElementById('loadingOverlay').classList.remove('active');
+            document.body.removeChild(fileInput);
+        });
+    };
+    
+    // Trigger file picker
+    document.body.appendChild(fileInput);
+    fileInput.click();
+}
+
+</script>
+
+<div class="footprints-path">
+  <img src="static/mens-shoeR.png" class="footprint step1" alt="Right Foot">
+  <img src="static/mens-shoeL.png" class="footprint step2" alt="Left Foot">
+  <img src="static/mens-shoeR.png" class="footprint step3" alt="Right Foot">
+  <img src="static/mens-shoeL.png" class="footprint step4" alt="Left Foot">
+  <img src="static/mens-shoeR.png" class="footprint step5" alt="Right Foot">
+  <img src="static/mens-shoeL.png" class="footprint step6" alt="Left Foot">
+  <img src="static/mens-shoeR.png" class="footprint step7" alt="Right Foot">
+  <img src="static/mens-shoeL.png" class="footprint step8" alt="Left Foot">
+  <img src="static/mens-shoeR.png" class="footprint step9" alt="Right Foot">
+  <img src="static/mens-shoeL.png" class="footprint step10" alt="Left Foot">
+  <img src="static/mens-shoeR.png" class="footprint step11" alt="Right Foot">
+  <img src="static/mens-shoeL.png" class="footprint step12" alt="Left Foot">
+  <img src="static/mens-shoeR.png" class="footprint step13" alt="Right Foot">
+  <img src="static/mens-shoeL.png" class="footprint step14" alt="Left Foot">
+  <img src="static/mens-shoeR.png" class="footprint step15" alt="Right Foot">
+  <img src="static/mens-shoeL.png" class="footprint step16" alt="Left Foot">
+
+</div>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text">Scanning digital profiles...</div>
+</div>
+
+<!-- Firm Confirmation Modal -->
+<div class="confirmation-modal" id="confirmationModal">
+  <div class="modal-content">
+    <h2>Is this the firm you are looking for?</h2>
+    <div class="firm-info">
+      <img id="firmLogo" src="" alt="Firm Logo" class="firm-logo">
+      <div class="firm-details">
+  <h3 id="advisorName" style="display: none;"></h3>
+  <h3 id="firmName"></h3>
+  <p id="locationLabel"><strong>Location:</strong> <span id="firmLocation"></span></p>
+</div>
+    </div>
+    <div class="modal-buttons">
+      <button class="confirm-btn" onclick="confirmFirm(true)">Yes</button>
+      <button class="confirm-btn secondary" onclick="confirmFirm(false)">No</button>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- Social Profiles Confirmation Modal -->
+<div class="confirmation-modal" id="socialProfilesModal">
+  <div class="modal-content">
+    <h2 style="color: #111827; margin-bottom: 24px;">Select profiles to check</h2>
+    <div id="socialProfilesContainer" style="margin: 20px 0; text-align: left;"></div>
+<p class="idk-option" id="socialIdkBtn" onclick="idkInSocialModal()" style="display:none;">Continue with website only</p>
+    <div class="modal-buttons">
+      <button class="add-page-btn" onclick="showSimplePlatformSelector()">Add Page</button>
+      <button class="confirm-btn" onclick="confirmSocialProfiles()">Continue</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Professionals Selection Modal -->
+<div class="professionals-modal" id="professionalsModal">
+  <div class="modal-content">
+    <h2>Would you like to check any financial professionals associated with the firm?</h2>
+    <div class="professionals-list" id="professionalsList">
+      <!-- Will be populated dynamically -->
+    </div>
+    <div class="modal-buttons">
+      <button class="confirm-btn" onclick="selectProfessionals()">Continue</button>
+      <button class="confirm-btn secondary" onclick="skipProfessionals()">No thanks</button>
+    </div>
+  </div>
+</div>
+
+<!-- Profiles Confirmation Modal -->
+<div class="confirmation-modal" id="profilesConfirmationModal">
+  <div class="modal-content">
+    <h2>Select Profiles to Check</h2>
+    <div id="profilesPreview" class="profiles-preview">
+      <!-- Profile preview cards will be injected here -->
+    </div>
+    <div class="modal-buttons">
+      <button class="confirm-btn" onclick="confirmProfiles(true)">Yes</button>
+      
+    </div>
+  </div>
+</div>
+
+<!-- Manual Entry Modal -->
+<div class="manual-entry-modal" id="manualEntryModal">
+  <div class="modal-content">
+    <h2>Please enter the firm details manually</h2>
+    <form id="manualEntryForm">
+      <input type="text" id="manualFirmName" placeholder="Firm Name" required>
+      <input type="text" id="manualLocation" placeholder="City, State" required>
+      <input type="text" id="manualBrokerDealer" placeholder="Broker Dealer" required>
+      <button type="submit" class="confirm-btn">Continue</button>
+    </form>
+  </div>
+</div>
+
+
+</body>
+</html>
