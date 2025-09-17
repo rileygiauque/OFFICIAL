@@ -31,7 +31,7 @@ import threading
 import math
 import time
 import traceback
-from pydub import AudioSegment
+#from pydub import AudioSegment
 
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -87,7 +87,7 @@ from werkzeug.utils import secure_filename
 from difflib import SequenceMatcher, get_close_matches
 from markupsafe import Markup
 from docx import Document
-from pydub import AudioSegment
+#from pydub import AudioSegment
 import vosk
 import wave
 import pdfplumber
