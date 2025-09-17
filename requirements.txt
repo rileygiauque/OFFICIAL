@@ -43,3 +43,4 @@ torch==2.8.0+cpu
 
 spacy
 APScheduler
+reportlab
