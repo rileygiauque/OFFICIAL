@@ -292,6 +292,18 @@
    ⚡ Retrieve All Facebook Queued Profiles
 </button>
 
+<button id="retrieveAllTwitter" 
+        class="btn btn-primary" 
+        style="background: #1da1f2;">
+   ⚡ Retrieve All Twitter Queued Profiles
+</button>
+
+<button id="retrieveAllYoutube" 
+        class="btn btn-primary" 
+        style="background: #FF0000;">
+   ⚡ Retrieve All YouTube Queued Profiles
+</button>
+
 		<!-- Compliance Check Buttons -->
     <a href="{{ url_for('check_all_facebook_posts') }}" class="btn btn-secondary" style="background: #dc3545;">🛡️ Check All Facebook</a>
     <a href="{{ url_for('check_all_linkedin_posts') }}" class="btn btn-secondary" style="background: #dc3545;">🛡️ Check All LinkedIn</a>
@@ -417,37 +429,6 @@
     </div>
 <script>
 
-// Load queued site counts for all advisors
-document.addEventListener('DOMContentLoaded', function() {
-    {% for advisor_id, data in advisor_data.items() %}
-    loadQueuedCount({{ advisor_id }});
-    loadFixedCount({{ advisor_id }}); // Add this line
-    {% endfor %}
-});
-
-
-// 🔄 Update dashboard counts automatically when localStorage changes
-window.addEventListener('storage', function(e) {
-    if (e.key && e.key.startsWith('selectedProfiles_')) {
-        const advisorId = e.key.split('_')[1];
-        loadQueuedCount(advisorId);
-    }
-});
-
-function loadQueuedCount(advisorId) {
-    const scanKey = `selectedProfiles_${advisorId}`;
-    const selectedProfiles = JSON.parse(localStorage.getItem(scanKey) || '[]');
-
-    const countElement = document.getElementById(`queuedCount-${advisorId}`);
-    if (countElement) {
-        countElement.textContent = selectedProfiles.length;
-
-        if (selectedProfiles.length === 0) {
-            countElement.style.background = '#f5f5f5';
-            countElement.style.color = '#999';
-        }
-    }
-}
 
 function loadFixedCount(advisorId) {
     try {
@@ -688,60 +669,82 @@ window.onload = function () {
 };
 
 
-
 document.addEventListener("DOMContentLoaded", function() {
-  const btn = document.getElementById("retrieveAllFacebook");
-  if (!btn) {
-    console.error("❌ Retrieve button not found in DOM!");
-    return;
-  }
-
-  console.log("✅ Retrieve button found and click handler attached.");
-
-  btn.addEventListener("click", function(e) {
-    e.preventDefault();
-    console.log("⚡ Retrieve All Facebook button clicked.");
-
-    let allQueued = [];
-
-    {% for advisor_id, data in advisor_data.items() %}
-      let profiles_{{ advisor_id }} = JSON.parse(localStorage.getItem("selectedProfiles_{{ advisor_id }}") || "[]");
-      console.log("📊 Advisor {{ advisor_id }} has", profiles_{{ advisor_id }}.length, "profiles queued.");
-      profiles_{{ advisor_id }}.forEach(p => {
-        if (p.platform === "facebook" && p.status !== "monitored") {
-          allQueued.push({advisor_id: {{ advisor_id }}, url: p.url});
-        }
-      });
-    {% endfor %}
-
-    console.log(`📊 Total queued profiles collected: ${allQueued.length}`);
-
-    if (allQueued.length === 0) {
-      alert("⚠️ No queued Facebook profiles found.");
-      console.warn("⚠️ No queued profiles found, aborting.");
-      return;
-    }
-
-    console.log("🚀 Sending queued profiles to backend…");
-
-    fetch("/retrieve_all_facebook", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({profiles: allQueued})
-    })
-    .then(r => r.json())
-    .then(data => {
-      console.log("✅ Backend response:", data);
-      alert(data.message || "Started processing queued profiles");
-    })
-    .catch(err => {
-      console.error("❌ Error sending profiles:", err);
-      alert("Error sending Facebook profiles to backend");
+  
+  // Facebook Button
+  const fbBtn = document.getElementById("retrieveAllFacebook");
+  if (fbBtn) {
+    fbBtn.addEventListener("click", async function(e) {
+      e.preventDefault();
+      
+      const response = await fetch("/get_all_queued_profiles");
+      const data = await response.json();
+      
+      if (data.success && data.profiles.facebook.length > 0) {
+        fetch("/retrieve_all_facebook", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({profiles: data.profiles.facebook})
+        })
+        .then(r => r.json())
+        .then(result => alert(result.message || "Started processing Facebook profiles"));
+      } else {
+        alert("No queued Facebook profiles found");
+      }
     });
+  }
+  
+  // Twitter Button  
+  const twitterBtn = document.getElementById("retrieveAllTwitter");
+  if (twitterBtn) {
+    twitterBtn.addEventListener("click", async function(e) {
+      e.preventDefault();
+      
+      const response = await fetch("/get_all_queued_profiles");
+      const data = await response.json();
+      
+      if (data.success && data.profiles.twitter.length > 0) {
+        fetch("/retrieve_all_twitter", {
+          method: "POST", 
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({profiles: data.profiles.twitter})
+        })
+        .then(r => r.json())
+        .then(result => alert(result.message || "Started processing Twitter profiles"));
+      } else {
+        alert("No queued Twitter profiles found");
+      }
+    });
+  }
+  
+  // YouTube Button (50 per batch)
+const youtubeBtn = document.getElementById("retrieveAllYoutube");
+if (youtubeBtn) {
+  youtubeBtn.addEventListener("click", async function(e) {
+    e.preventDefault();
+    
+    const response = await fetch("/get_queued_youtube_profiles?limit=50");
+    const data = await response.json();
+    
+    if (data.success && data.profiles.length > 0) {
+      fetch("/retrieve_all_youtube", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"}, 
+        body: JSON.stringify({profiles: data.profiles})
+      })
+      .then(r => r.json())
+      .then(result => {
+        const batchMsg = data.batch_complete ? 
+          `Started processing ${data.count} YouTube profiles (final batch)` :
+          `Started processing ${data.count} YouTube profiles (batch 1 of many)`;
+        alert(result.message || batchMsg);
+      });
+    } else {
+      alert("No queued YouTube profiles found");
+    }
   });
+}
 });
-
-
 
 </script>
 </body>
