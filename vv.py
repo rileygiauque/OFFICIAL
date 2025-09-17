@@ -87,7 +87,19 @@ from werkzeug.utils import secure_filename
 from difflib import SequenceMatcher, get_close_matches
 from markupsafe import Markup
 from docx import Document
-#from pydub import AudioSegment
+
+try:
+    from pydub import AudioSegment
+    # Set ffmpeg path only if AudioSegment is available
+    try:
+        AudioSegment.converter = "/opt/homebrew/bin/ffmpeg"
+    except:
+        pass  # Continue if ffmpeg path setting fails
+except ImportError:
+    # If pydub is not available, define a dummy AudioSegment or set to None
+    AudioSegment = None
+    print("Warning: pydub not available, audio features will be disabled")
+    
 #import vosk
 import wave
 import pdfplumber
