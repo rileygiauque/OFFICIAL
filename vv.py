@@ -10932,8 +10932,10 @@ def reconcile_compliance_checks(first_check, second_check):
     
     return reconciled
 
-# Set the path for ffmpeg in pydub
-AudioSegment.converter = "/opt/homebrew/bin/ffmpeg"
+try:
+    AudioSegment.converter = "/opt/homebrew/bin/ffmpeg"
+except:
+    pass
 
 
 # APP = FLASK(__name__)
