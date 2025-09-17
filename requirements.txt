@@ -30,4 +30,4 @@ bcrypt
 cryptography
 requests>=2.25.1
 transformers==4.44.2
-torch==2.4.1
+torch==2.5.1
