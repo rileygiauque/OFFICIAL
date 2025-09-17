@@ -30,6 +30,7 @@ bcrypt
 cryptography
 requests>=2.25.1
 schedule
+psutil
 
 # AI / ML stack
 transformers==4.45.0
