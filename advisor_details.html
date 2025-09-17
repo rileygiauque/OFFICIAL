@@ -735,7 +735,7 @@ async function loadQueuedSites() {
     
     const selectedProfiles = JSON.parse(localStorage.getItem(scanKey) || '[]');
     
-    // Get existing URLs from the database (from the Jinja template data)
+    // Get existing URLs from the database FOR THIS ADVISOR ONLY (from the Jinja template data)
     const existingUrls = [
         {% for domain, data in grouped_pages.items() %}
             {% for page in data.pages %}
@@ -744,13 +744,13 @@ async function loadQueuedSites() {
         {% endfor %}
     ];
     
-    console.log('🔧 LOAD QUEUED SITES DEBUG:');
+    console.log('🔧 LOAD QUEUED SITES DEBUG (ADVISOR-SPECIFIC):');
     console.log('- selectedProfiles count:', selectedProfiles.length);
-    console.log('- existingUrls from database:', existingUrls);
+    console.log('- existingUrls for THIS advisor from database:', existingUrls);
     
-    // Only show profiles that aren't already monitored in the database
+    // Only show profiles that aren't already monitored BY THIS ADVISOR
     const socialProfiles = selectedProfiles.filter(profile => {
-        const isInDatabase = existingUrls.some(existingUrl => {
+        const isInDatabaseForThisAdvisor = existingUrls.some(existingUrl => {
             // Normalize URLs for comparison
             const normalizeUrl = (url) => {
                 return url.toLowerCase()
@@ -762,11 +762,11 @@ async function loadQueuedSites() {
             return normalizeUrl(existingUrl) === normalizeUrl(profile.url);
         });
         
-        console.log(`- Profile ${profile.url}: inDatabase=${isInDatabase}`);
-        return !isInDatabase;
+        console.log(`- Profile ${profile.url}: inDatabaseForThisAdvisor=${isInDatabaseForThisAdvisor}`);
+        return !isInDatabaseForThisAdvisor; // Only filter if monitored by THIS advisor
     });
 
-    console.log('- socialProfiles after filtering:', socialProfiles.length);
+    console.log('- socialProfiles after advisor-specific filtering:', socialProfiles.length);
 
     const scanSessionId_q = localStorage.getItem('currentScanSession') || 'default';
     localStorage.setItem('currentScanSession', scanSessionId_q);
@@ -779,7 +779,7 @@ async function loadQueuedSites() {
     const queuedContainer = document.getElementById('queuedSitesList');
     
     if (socialProfiles.length === 0) {
-        queuedContainer.innerHTML = '<p style="color: #666; font-style: italic;">No queued social media sites</p>';
+        queuedContainer.innerHTML = '<p style="color: #666; font-style: italic;">No queued social media sites for this advisor</p>';
         return;
     }
     
