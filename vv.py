@@ -36,7 +36,7 @@ import traceback
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
-import speech_recognition as sr
+#import speech_recognition as sr
 
 import json
 from flask import jsonify, request
