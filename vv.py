@@ -88,7 +88,7 @@ from difflib import SequenceMatcher, get_close_matches
 from markupsafe import Markup
 from docx import Document
 #from pydub import AudioSegment
-import vosk
+#import vosk
 import wave
 import pdfplumber
 import uuid
