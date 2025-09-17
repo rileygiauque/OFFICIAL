@@ -24,6 +24,7 @@ aiohttp==3.10.10
 pandas
 numpy
 nltk
+pydub>=0.25.1
 selenium==4.27.1
 bcrypt
 cryptography
