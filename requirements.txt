@@ -40,3 +40,6 @@ tokenizers==0.20.3
 # Use CPU-only build of torch to avoid 20-minute CUDA downloads
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch==2.8.0+cpu
+
+spacy
+APScheduler
