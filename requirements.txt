@@ -27,3 +27,4 @@ nltk
 selenium==4.27.1
 bcrypt
 cryptography
+requests>=2.25.1
