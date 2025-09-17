@@ -31,18 +31,12 @@ import threading
 import math
 import time
 import traceback
-try:
-    from pydub import AudioSegment
-except ImportError:
-    AudioSegment = None
+from pydub import AudioSegment
 
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
-try:
-    import speech_recognition as sr
-except ImportError:
-    sr = None
+import speech_recognition as sr
 
 import json
 from flask import jsonify, request
@@ -93,12 +87,8 @@ from werkzeug.utils import secure_filename
 from difflib import SequenceMatcher, get_close_matches
 from markupsafe import Markup
 from docx import Document
-
-try:
-    import vosk
-except ImportError:
-    vosk = None
-    
+from pydub import AudioSegment
+import vosk
 import wave
 import pdfplumber
 import uuid
@@ -109,38 +99,21 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 import pty
-try:
-    import spacy
-except ImportError:
-    spacy = None
+import spacy
 import psycopg2
 import stripe
 import openai
 
-try:
-    from transformers import BertTokenizer, BertForSequenceClassification
-except ImportError:
-    BertTokenizer = None
-    BertForSequenceClassification = None
-    
-try:
-    import torch
-    from torch.nn.functional import softmax
-except ImportError:
-    torch = None
-    softmax = None
+from transformers import BertTokenizer, BertForSequenceClassification
+import torch
+from torch.nn.functional import softmax
 
 import sqlite3
 import threading
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
 import difflib
-
-try:
-    import schedule
-except ImportError:
-    schedule = None
-
+import schedule
 from datetime import datetime
 
 import hashlib
@@ -278,11 +251,7 @@ twitter_logged_in = False
 
 processed_post_hashes = set()
 
-try:
-    import psutil
-except ImportError:
-    psutil = None
-    
+import psutil
 import os
 import gc
 
@@ -10952,10 +10921,7 @@ def reconcile_compliance_checks(first_check, second_check):
     return reconciled
 
 # Set the path for ffmpeg in pydub
-# AudioSegment.converter = "/opt/homebrew/bin/ffmpeg"
-
-if AudioSegment is not None:
-    AudioSegment.converter = "/opt/homebrew/bin/ffmpeg"
+AudioSegment.converter = "/opt/homebrew/bin/ffmpeg"
 
 
 # APP = FLASK(__name__)
@@ -11094,6 +11060,976 @@ def build_youtube_content_text(videos):
         lines.append("")  # blank line between items
     return "\n".join(lines).strip()
 
+# Youtube Post Monitor
+
+import hmac
+import hashlib
+import requests
+from urllib.parse import urlencode
+import time
+
+# WebSub Configuration
+WEBSUB_HUB_URL = "https://pubsubhubbub.appspot.com/subscribe"
+WEBSUB_CALLBACK_SECRET = "your-secret-key-here"  
+YOUR_DOMAIN = "https://yourdomain.com"
+
+@app.route('/websub/callback', methods=['GET', 'POST'])
+def websub_callback():
+    """Handle WebSub subscription verification and notifications"""
+    
+    start_time = time.time()
+    logger.info(f"🔔 WebSub callback received: method={request.method}, IP={request.remote_addr}")
+    
+    if request.method == 'GET':
+        # Subscription verification
+        challenge = request.args.get('hub.challenge')
+        mode = request.args.get('hub.mode')
+        topic = request.args.get('hub.topic')
+        lease_seconds = request.args.get('hub.lease_seconds')
+        
+        logger.info(f"📋 WebSub verification request:")
+        logger.info(f"   - Mode: {mode}")
+        logger.info(f"   - Topic: {topic}")
+        logger.info(f"   - Challenge: {challenge[:20] if challenge else None}...")
+        logger.info(f"   - Lease: {lease_seconds} seconds")
+        
+        if mode == 'subscribe' and challenge:
+            # Extract channel ID from topic for logging
+            if topic and 'channel_id=' in topic:
+                channel_id = topic.split('channel_id=')[1]
+                logger.info(f"✅ WebSub subscription VERIFIED for channel {channel_id}")
+                
+                # Update database subscription status
+                try:
+                    conn = get_db_connection()
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        UPDATE youtube_subscriptions 
+                        SET status = 'active', last_verification = NOW()
+                        WHERE channel_id = %s
+                    """, (channel_id,))
+                    rows_updated = cursor.rowcount
+                    conn.commit()
+                    cursor.close()
+                    release_db_connection(conn)
+                    logger.info(f"📊 Database updated: {rows_updated} subscription(s) marked active")
+                except Exception as e:
+                    logger.error(f"❌ Database update failed during verification: {e}")
+            
+            elapsed = (time.time() - start_time) * 1000
+            logger.info(f"⏱️  WebSub verification completed in {elapsed:.1f}ms")
+            return challenge, 200
+        else:
+            logger.warning(f"❌ WebSub verification FAILED: mode={mode}, challenge_present={bool(challenge)}")
+            elapsed = (time.time() - start_time) * 1000
+            logger.warning(f"⏱️  WebSub verification failed in {elapsed:.1f}ms")
+            return 'Bad Request', 400
+    
+    elif request.method == 'POST':
+        # New content notification
+        content_length = len(request.data)
+        content_type = request.headers.get('Content-Type', 'unknown')
+        signature = request.headers.get('X-Hub-Signature', 'none')
+        
+        logger.info(f"📺 WebSub notification received:")
+        logger.info(f"   - Content-Length: {content_length} bytes")
+        logger.info(f"   - Content-Type: {content_type}")
+        logger.info(f"   - Signature: {signature[:20] if signature != 'none' else 'none'}...")
+        
+        try:
+            # Verify the signature
+            signature_start = time.time()
+            signature_valid = verify_websub_signature(request.data, signature)
+            signature_time = (time.time() - signature_start) * 1000
+            
+            if not signature_valid:
+                logger.error(f"❌ WebSub signature verification FAILED (took {signature_time:.1f}ms)")
+                logger.error(f"   - Received signature: {signature}")
+                logger.error(f"   - Content preview: {request.data[:100]}...")
+                return 'Unauthorized', 401
+            
+            logger.info(f"✅ WebSub signature verified in {signature_time:.1f}ms")
+            
+            # Parse the Atom feed
+            parse_start = time.time()
+            content = request.data.decode('utf-8')
+            logger.debug(f"📄 Raw XML content preview: {content[:200]}...")
+            
+            channel_id, new_videos = parse_youtube_atom_feed(content)
+            parse_time = (time.time() - parse_start) * 1000
+            
+            logger.info(f"🔍 Atom feed parsed in {parse_time:.1f}ms:")
+            logger.info(f"   - Channel ID: {channel_id}")
+            logger.info(f"   - Videos found: {len(new_videos) if new_videos else 0}")
+            
+            if new_videos:
+                for i, video in enumerate(new_videos):
+                    logger.info(f"   - Video {i+1}: {video.get('title', 'No title')} ({video.get('video_id', 'No ID')})")
+            
+            if channel_id and new_videos:
+                # Find which advisor owns this channel
+                advisor_lookup_start = time.time()
+                advisor_id = get_advisor_for_channel(channel_id)
+                advisor_lookup_time = (time.time() - advisor_lookup_start) * 1000
+                
+                logger.info(f"👤 Advisor lookup completed in {advisor_lookup_time:.1f}ms: advisor_id={advisor_id}")
+                
+                if advisor_id:
+                    logger.info(f"🚀 Starting background processing for advisor {advisor_id}")
+                    # Process new videos in background
+                    threading.Thread(
+                        target=process_new_youtube_videos,
+                        args=(advisor_id, channel_id, new_videos),
+                        daemon=True,
+                        name=f"YouTubeProcessor-{channel_id}-{int(time.time())}"
+                    ).start()
+                else:
+                    logger.warning(f"⚠️ No advisor found for channel {channel_id} - notification ignored")
+            else:
+                logger.info(f"ℹ️ No actionable content in notification (channel_id={channel_id}, videos={len(new_videos) if new_videos else 0})")
+            
+            elapsed = (time.time() - start_time) * 1000
+            logger.info(f"⏱️  WebSub notification processed in {elapsed:.1f}ms total")
+            return 'OK', 200
+            
+        except UnicodeDecodeError as e:
+            logger.error(f"❌ Unicode decode error in WebSub notification: {e}")
+            logger.error(f"   - Raw bytes: {request.data[:100]}...")
+            return 'Bad Request', 400
+        except Exception as e:
+            elapsed = (time.time() - start_time) * 1000
+            logger.error(f"❌ Error processing WebSub notification (after {elapsed:.1f}ms): {e}", exc_info=True)
+            return 'Internal Server Error', 500
+
+def verify_websub_signature(data, signature):
+    """Verify WebSub HMAC signature with extensive logging"""
+    logger.debug(f"🔐 Verifying signature:")
+    logger.debug(f"   - Data length: {len(data)} bytes")
+    logger.debug(f"   - Signature format: {signature[:10] if signature else 'None'}...")
+    
+    if not signature or not signature.startswith('sha1='):
+        logger.warning(f"❌ Invalid signature format: {signature}")
+        return False
+    
+    try:
+        expected_signature = 'sha1=' + hmac.new(
+            WEBSUB_CALLBACK_SECRET.encode(),
+            data,
+            hashlib.sha1
+        ).hexdigest()
+        
+        signatures_match = hmac.compare_digest(signature, expected_signature)
+        logger.debug(f"🔐 Signature comparison: {'✅ MATCH' if signatures_match else '❌ MISMATCH'}")
+        
+        if not signatures_match:
+            logger.debug(f"   - Expected: {expected_signature[:30]}...")
+            logger.debug(f"   - Received: {signature[:30]}...")
+        
+        return signatures_match
+    except Exception as e:
+        logger.error(f"❌ Signature verification error: {e}")
+        return False
+
+def parse_youtube_atom_feed(xml_content):
+    """Parse YouTube Atom feed with extensive logging"""
+    parse_start = time.time()
+    logger.info(f"🔍 Starting Atom feed parsing ({len(xml_content)} chars)")
+    
+    try:
+        from xml.etree import ElementTree as ET
+        
+        xml_parse_start = time.time()
+        root = ET.fromstring(xml_content)
+        xml_parse_time = (time.time() - xml_parse_start) * 1000
+        logger.debug(f"📄 XML parsed in {xml_parse_time:.1f}ms, root tag: {root.tag}")
+        
+        # Extract channel ID
+        channel_id = None
+        channel_search_start = time.time()
+        
+        for link in root.findall('.//{http://www.w3.org/2005/Atom}link'):
+            href = link.get('href', '')
+            if 'channel_id=' in href:
+                channel_id = href.split('channel_id=')[1].split('&')[0]
+                logger.debug(f"📺 Channel ID found in link: {channel_id}")
+                break
+        
+        channel_search_time = (time.time() - channel_search_start) * 1000
+        logger.debug(f"🔍 Channel ID search completed in {channel_search_time:.1f}ms")
+        
+        # Extract video entries
+        video_search_start = time.time()
+        videos = []
+        entries = root.findall('.//{http://www.w3.org/2005/Atom}entry')
+        logger.debug(f"📋 Found {len(entries)} entry elements")
+        
+        for i, entry in enumerate(entries):
+            video_id_elem = entry.find('.//{http://www.youtube.com/xml/schemas/2015}videoId')
+            title_elem = entry.find('.//{http://www.w3.org/2005/Atom}title')
+            published_elem = entry.find('.//{http://www.w3.org/2005/Atom}published')
+            
+            logger.debug(f"📹 Entry {i+1}: videoId={'✅' if video_id_elem is not None else '❌'}, title={'✅' if title_elem is not None else '❌'}")
+            
+            if video_id_elem is not None and title_elem is not None:
+                video = {
+                    'video_id': video_id_elem.text,
+                    'title': title_elem.text,
+                    'url': f"https://www.youtube.com/watch?v={video_id_elem.text}",
+                    'published': published_elem.text if published_elem is not None else None
+                }
+                videos.append(video)
+                logger.debug(f"   ✅ Video added: {video['title']} ({video['video_id']})")
+        
+        video_search_time = (time.time() - video_search_start) * 1000
+        parse_total_time = (time.time() - parse_start) * 1000
+        
+        logger.info(f"🎬 Atom parsing completed in {parse_total_time:.1f}ms:")
+        logger.info(f"   - Video search: {video_search_time:.1f}ms")
+        logger.info(f"   - Channel: {channel_id}")
+        logger.info(f"   - Videos: {len(videos)}")
+        
+        return channel_id, videos
+        
+    except ET.ParseError as e:
+        logger.error(f"❌ XML parsing error: {e}")
+        logger.error(f"   - XML preview: {xml_content[:200]}...")
+        return None, []
+    except Exception as e:
+        parse_time = (time.time() - parse_start) * 1000
+        logger.error(f"❌ Error parsing YouTube Atom feed (after {parse_time:.1f}ms): {e}", exc_info=True)
+        return None, []
+
+def get_advisor_for_channel(channel_id):
+    """Find advisor for channel with extensive logging"""
+    lookup_start = time.time()
+    logger.info(f"👤 Looking up advisor for channel: {channel_id}")
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        query_start = time.time()
+        cursor.execute("""
+            SELECT DISTINCT advisor_id 
+            FROM youtube_videos 
+            WHERE channel_url LIKE %s
+        """, (f'%{channel_id}%',))
+        
+        result = cursor.fetchone()
+        query_time = (time.time() - query_start) * 1000
+        
+        cursor.close()
+        release_db_connection(conn)
+        
+        lookup_time = (time.time() - lookup_start) * 1000
+        
+        if result:
+            logger.info(f"✅ Advisor found in {lookup_time:.1f}ms: advisor_id={result[0]} (query: {query_time:.1f}ms)")
+            return result[0]
+        else:
+            logger.warning(f"❌ No advisor found for channel {channel_id} (search took {lookup_time:.1f}ms)")
+            return None
+        
+    except Exception as e:
+        lookup_time = (time.time() - lookup_start) * 1000
+        logger.error(f"❌ Error finding advisor for channel {channel_id} (after {lookup_time:.1f}ms): {e}", exc_info=True)
+        return None
+
+def process_new_youtube_videos(advisor_id, channel_id, new_videos):
+    """Process new videos with extensive logging"""
+    thread_name = threading.current_thread().name
+    process_start = time.time()
+    
+    logger.info(f"🎥 [{thread_name}] Starting video processing:")
+    logger.info(f"   - Advisor ID: {advisor_id}")
+    logger.info(f"   - Channel ID: {channel_id}")
+    logger.info(f"   - Videos to process: {len(new_videos)}")
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        videos_processed = 0
+        videos_skipped = 0
+        videos_inserted = 0
+        
+        for i, video in enumerate(new_videos):
+            video_start = time.time()
+            logger.debug(f"🔍 [{thread_name}] Processing video {i+1}/{len(new_videos)}: {video['title']}")
+            
+            # Check if we already have this video
+            cursor.execute("""
+                SELECT COUNT(*) FROM youtube_videos 
+                WHERE video_url = %s AND advisor_id = %s
+            """, (video['url'], advisor_id))
+            
+            existing_count = cursor.fetchone()[0]
+            
+            if existing_count == 0:
+                # New video - save it
+                try:
+                    cursor.execute("""
+                        INSERT INTO youtube_videos 
+                        (advisor_id, channel_url, video_url, title, published_date, scraped_at)
+                        VALUES (%s, %s, %s, %s, %s, NOW())
+                    """, (
+                        advisor_id,
+                        f"https://www.youtube.com/channel/{channel_id}",
+                        video['url'],
+                        video['title'],
+                        video.get('published')
+                    ))
+                    
+                    videos_inserted += 1
+                    video_time = (time.time() - video_start) * 1000
+                    logger.info(f"✅ [{thread_name}] Inserted video in {video_time:.1f}ms: {video['title']}")
+                    
+                except Exception as insert_error:
+                    video_time = (time.time() - video_start) * 1000
+                    logger.error(f"❌ [{thread_name}] Insert failed after {video_time:.1f}ms: {insert_error}")
+            else:
+                videos_skipped += 1
+                video_time = (time.time() - video_start) * 1000
+                logger.debug(f"⏭️ [{thread_name}] Skipped existing video in {video_time:.1f}ms: {video['title']}")
+            
+            videos_processed += 1
+        
+        # Commit all changes
+        commit_start = time.time()
+        conn.commit()
+        commit_time = (time.time() - commit_start) * 1000
+        
+        cursor.close()
+        release_db_connection(conn)
+        
+        process_time = (time.time() - process_start) * 1000
+        
+        logger.info(f"🎬 [{thread_name}] Video processing completed in {process_time:.1f}ms:")
+        logger.info(f"   - Total processed: {videos_processed}")
+        logger.info(f"   - New videos inserted: {videos_inserted}")
+        logger.info(f"   - Existing videos skipped: {videos_skipped}")
+        logger.info(f"   - Database commit time: {commit_time:.1f}ms")
+        
+    except Exception as e:
+        process_time = (time.time() - process_start) * 1000
+        logger.error(f"❌ [{thread_name}] Error processing videos (after {process_time:.1f}ms): {e}", exc_info=True)
+
+def subscribe_youtube_channel(advisor_id, channel_id, channel_url):
+    """Subscribe to YouTube channel with extensive logging"""
+    sub_start = time.time()
+    logger.info(f"📡 Starting WebSub subscription:")
+    logger.info(f"   - Advisor ID: {advisor_id}")
+    logger.info(f"   - Channel ID: {channel_id}")
+    logger.info(f"   - Channel URL: {channel_url}")
+    
+    try:
+        topic_url = f"https://www.youtube.com/xml/feeds/videos.xml?channel_id={channel_id}"
+        callback_url = f"{YOUR_DOMAIN}/websub/callback"
+        
+        logger.info(f"📋 Subscription details:")
+        logger.info(f"   - Topic URL: {topic_url}")
+        logger.info(f"   - Callback URL: {callback_url}")
+        logger.info(f"   - Hub URL: {WEBSUB_HUB_URL}")
+        
+        # Subscription request
+        data = {
+            'hub.callback': callback_url,
+            'hub.topic': topic_url,
+            'hub.mode': 'subscribe',
+            'hub.verify': 'async',
+            'hub.secret': WEBSUB_CALLBACK_SECRET,
+            'hub.lease_seconds': 864000  # 10 days
+        }
+        
+        request_start = time.time()
+        logger.debug(f"🌐 Sending POST request to hub...")
+        
+        response = requests.post(WEBSUB_HUB_URL, data=data, timeout=10)
+        request_time = (time.time() - request_start) * 1000
+        
+        logger.info(f"📡 Hub response received in {request_time:.1f}ms:")
+        logger.info(f"   - Status Code: {response.status_code}")
+        logger.info(f"   - Response Headers: {dict(response.headers)}")
+        logger.info(f"   - Response Body: {response.text[:200] if response.text else 'Empty'}")
+        
+        if response.status_code == 202:
+            logger.info(f"✅ WebSub subscription request ACCEPTED for channel {channel_id}")
+            
+            # Store subscription in database
+            db_start = time.time()
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                INSERT INTO youtube_subscriptions 
+                (advisor_id, channel_id, channel_url, subscribed_at, status)
+                VALUES (%s, %s, %s, NOW(), 'pending')
+                ON CONFLICT (channel_id) 
+                DO UPDATE SET 
+                    subscribed_at = NOW(),
+                    status = 'pending',
+                    advisor_id = %s
+            """, (advisor_id, channel_id, channel_url, advisor_id))
+            
+            conn.commit()
+            cursor.close()
+            release_db_connection(conn)
+            
+            db_time = (time.time() - db_start) * 1000
+            total_time = (time.time() - sub_start) * 1000
+            
+            logger.info(f"📊 Database updated in {db_time:.1f}ms")
+            logger.info(f"🎉 Subscription process completed in {total_time:.1f}ms")
+            
+        else:
+            total_time = (time.time() - sub_start) * 1000
+            logger.error(f"❌ WebSub subscription REJECTED for {channel_id} after {total_time:.1f}ms:")
+            logger.error(f"   - Status: {response.status_code}")
+            logger.error(f"   - Response: {response.text}")
+            
+    except requests.exceptions.Timeout:
+        total_time = (time.time() - sub_start) * 1000
+        logger.error(f"⏰ WebSub subscription TIMEOUT for {channel_id} after {total_time:.1f}ms")
+    except requests.exceptions.RequestException as e:
+        total_time = (time.time() - sub_start) * 1000
+        logger.error(f"🌐 WebSub request ERROR for {channel_id} after {total_time:.1f}ms: {e}")
+    except Exception as e:
+        total_time = (time.time() - sub_start) * 1000
+        logger.error(f"❌ WebSub subscription ERROR for {channel_id} after {total_time:.1f}ms: {e}", exc_info=True)
+        
+
+# Twitter 5 worker scraper
+@app.route('/retrieve_all_twitter', methods=['POST'])
+def retrieve_all_twitter():
+    data = request.get_json()
+    twitter_links = data.get("profiles", [])
+
+    app.logger.info(f"📥 Incoming Twitter profiles: {len(twitter_links)} received")
+
+    if not twitter_links:
+        return jsonify({"success": False, "message": "No queued Twitter profiles received"}), 400
+
+    import datetime
+    today = datetime.date.today()
+    app.logger.info(f"📅 Today = {today}")
+
+    # Spin off background task with 5-worker Twitter scraper
+    threading.Thread(
+        target=lambda: asyncio.run(process_twitter_links(
+            [(p["advisor_id"], p["url"]) for p in twitter_links]
+        ))
+    ).start()
+
+    app.logger.info(f"🚀 Started background task for {len(twitter_links)} Twitter profiles")
+    return jsonify({
+        "success": True,
+        "message": f"Started retrieving {len(twitter_links)} queued Twitter profiles"
+    })
+
+import asyncio
+import concurrent.futures
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+
+# Global pool of Twitter drivers (dynamic size)
+twitter_driver_pool = []
+twitter_pool_lock = threading.Lock()
+twitter_pool_initialized = False
+
+def initialize_twitter_driver_pool(num_workers):
+    """Initialize Twitter driver pool with only the needed number of drivers"""
+    global twitter_pool_initialized
+    
+    with twitter_pool_lock:
+        if twitter_pool_initialized:
+            return
+            
+        app.logger.info(f"🔧 Initializing Twitter driver pool with {num_workers} drivers")
+        
+        for i in range(num_workers):
+            options = Options()
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-dev-shm-usage')
+            options.add_argument('--disable-gpu')
+            options.add_argument(f'--user-data-dir=/tmp/twitter_profile_{i}')
+            
+            driver = webdriver.Chrome(options=options)
+            # Pre-login each driver to Twitter
+            driver.get('https://x.com/login')
+            time.sleep(5)  # Wait for manual login
+            twitter_driver_pool.append(driver)
+            app.logger.info(f"✅ Twitter driver {i+1}/{num_workers} initialized")
+            
+        twitter_pool_initialized = True
+        app.logger.info(f"🎉 Twitter driver pool initialization complete: {num_workers} drivers ready")
+
+def get_twitter_driver_from_pool():
+    """Get a Twitter driver from the pool"""
+    with twitter_pool_lock:
+        if twitter_driver_pool:
+            driver = twitter_driver_pool.pop()
+            app.logger.info(f"📤 Retrieved driver from pool. Remaining: {len(twitter_driver_pool)}")
+            return driver
+        else:
+            app.logger.warning("⚠️ No Twitter drivers available in pool")
+            return None
+
+def return_twitter_driver_to_pool(driver):
+    """Return a Twitter driver to the pool"""
+    with twitter_pool_lock:
+        twitter_driver_pool.append(driver)
+        app.logger.info(f"📥 Returned driver to pool. Total available: {len(twitter_driver_pool)}")
+
+def cleanup_twitter_driver_pool():
+    """Clean up all drivers in the pool"""
+    global twitter_pool_initialized
+    
+    with twitter_pool_lock:
+        app.logger.info(f"🧹 Cleaning up Twitter driver pool ({len(twitter_driver_pool)} drivers)")
+        
+        for driver in twitter_driver_pool:
+            try:
+                driver.quit()
+            except:
+                pass
+        
+        twitter_driver_pool.clear()
+        twitter_pool_initialized = False
+        app.logger.info("✅ Twitter driver pool cleanup complete")
+        
+# Add this global variable at the top with your other globals
+processed_show_more_tweets = set()
+
+def click_show_more_buttons_bulk(tweet_elem, driver, twitter_url):
+    """Bulk version with navigation detection and duplicate prevention"""
+    try:
+        # ✅ NEW: Create a unique identifier for this tweet element
+        try:
+            # Try to get a unique identifier (tweet ID, timestamp, or text snippet)
+            tweet_id = None
+            
+            # Method 1: Try to get tweet ID from URL links
+            try:
+                link_elem = tweet_elem.find_element(By.CSS_SELECTOR, 'a[href*="/status/"]')
+                href = link_elem.get_attribute('href')
+                if '/status/' in href:
+                    tweet_id = href.split('/status/')[-1].split('?')[0]
+            except:
+                pass
+            
+            # Method 2: Fallback to first few words of tweet text
+            if not tweet_id:
+                try:
+                    text_elem = tweet_elem.find_element(By.CSS_SELECTOR, '[data-testid="tweetText"]')
+                    tweet_text = text_elem.text.strip()
+                    if tweet_text:
+                        tweet_id = f"{twitter_url}_{tweet_text[:50]}"  # First 50 chars as ID
+                except:
+                    pass
+            
+            # Method 3: Last resort - use element location
+            if not tweet_id:
+                location = tweet_elem.location
+                tweet_id = f"{twitter_url}_{location['x']}_{location['y']}"
+            
+            # Check if we've already processed this tweet's "Show more" buttons
+            if tweet_id in processed_show_more_tweets:
+                return  # Skip - already processed
+                
+        except Exception:
+            return  # Can't identify tweet, skip to be safe
+        
+        xpath_selectors = [
+            './/span[contains(text(), "Show more")]',
+            './/div[contains(text(), "Show more")]',
+            './/span[contains(text(), "show more")]',
+            './/div[contains(text(), "show more")]'
+        ]
+        
+        show_more_buttons = []
+        for xpath in xpath_selectors:
+            try:
+                buttons = tweet_elem.find_elements(By.XPATH, xpath)
+                show_more_buttons.extend(buttons)
+            except:
+                continue
+        
+        # Remove duplicates
+        unique_buttons = []
+        for button in show_more_buttons:
+            if button not in unique_buttons:
+                unique_buttons.append(button)
+        
+        if unique_buttons:
+            # ✅ NEW: Mark this tweet as processed BEFORE clicking
+            processed_show_more_tweets.add(tweet_id)
+            app.logger.info(f"🔄 Processing 'Show more' for tweet: {tweet_id[:100]}...")
+            
+            for i, button in enumerate(unique_buttons):
+                try:
+                    if button.is_displayed() and button.is_enabled():
+                        current_url = driver.current_url
+                        
+                        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", button)
+                        time.sleep(random.uniform(0.5, 1.0))
+                        
+                        try:
+                            button.click()
+                        except:
+                            driver.execute_script("arguments[0].click();", button)
+                        
+                        time.sleep(random.uniform(1.0, 2.0))
+                        
+                        # Check if we navigated to a different page
+                        new_url = driver.current_url
+                        if new_url != current_url:
+                            app.logger.warning(f"⚠️ 'Show more' caused navigation from {current_url} to {new_url} - going back")
+                            driver.back()
+                            time.sleep(random.uniform(2.0, 3.0))
+                            break  # Stop clicking more buttons in this tweet
+                        
+                except Exception as e:
+                    continue
+                    
+    except Exception as e:
+        pass
+    
+def extract_tweet_text_from_element_bulk(tweet_elem):
+    """Bulk version of your tweet text extraction"""
+    tweet_text = ""
+    
+    selectors_to_try = [
+        '[data-testid="tweetText"]',
+        '[dir="auto"]',
+        '[lang]',
+        'span[dir="auto"]'
+    ]
+    
+    for selector in selectors_to_try:
+        try:
+            text_elem = tweet_elem.find_element(By.CSS_SELECTOR, selector)
+            tweet_text = text_elem.text.strip()
+            if tweet_text and len(tweet_text) >= 1:
+                break
+        except:
+            continue
+    
+    if not tweet_text:
+        full_text = tweet_elem.text.strip()
+        lines = full_text.split('\n')
+        
+        for line in lines:
+            line = line.strip()
+            if (line and 
+                len(line) >= 1 and 
+                not line.startswith('@') and 
+                not line.startswith('·') and
+                not line.endswith('ago') and
+                not line.isdigit() and
+                line not in ['h', 'm', 's', 'Pinned', 'pinned']):
+                tweet_text = line
+                break
+    
+    return tweet_text
+
+async def process_twitter_links(twitter_links):
+    """Process Twitter links with dynamic workers (1-5) using full scrolling logic"""
+    num_profiles = len(twitter_links)
+    # Dynamic worker count: min of profiles or 5
+    max_workers = min(num_profiles, 5)
+    
+    app.logger.info(f"🐦 Starting Twitter bulk processing: {num_profiles} profiles with {max_workers} workers")
+
+    # ✅ NEW: Initialize the driver pool with only the needed number
+    initialize_twitter_driver_pool(max_workers)
+
+    
+    def scrape_single_twitter_full(advisor_id, twitter_url):
+        """Scrape a single Twitter profile using your full original logic"""
+        driver = None
+        try:
+            # ✅ NEW: Clear processed tweets set for this profile
+            processed_show_more_tweets.clear()
+
+            driver = get_twitter_driver_from_pool()
+            if not driver:
+                app.logger.error(f"❌ No Twitter driver available for {twitter_url}")
+                return False
+                
+            app.logger.info(f"🐦 Starting full scrape for: {twitter_url}")
+            
+            # Navigate to profile
+            driver.get(twitter_url)
+            time.sleep(random.uniform(3, 6))
+            
+            # **YOUR ORIGINAL SOPHISTICATED SCROLLING LOGIC**
+            tweets = []
+            max_scrolls = 20       # Your original value
+            no_new_content_count = 0
+            max_no_new_content = 4  # Your original value
+            
+            last_tweet_count = 0
+            reading_break_counter = 0
+            suspected_bottom_attempts = 0  # Your key bottom detection counter
+            
+            for scroll_attempt in range(max_scrolls):
+                app.logger.info(f"Human-like scroll attempt {scroll_attempt + 1}/{max_scrolls} for {twitter_url}")
+                
+                # **HUMAN BEHAVIOR: Sometimes pause to "read" content**
+                if scroll_attempt > 0 and random.random() < 0.3:  # 30% chance
+                    reading_pause = random.uniform(2, 8)
+                    app.logger.info(f"Taking a 'reading break' for {reading_pause:.1f} seconds...")
+                    time.sleep(reading_pause)
+                
+                # Extract tweets at current position
+                try:
+                    tweet_elements = driver.find_elements(By.CSS_SELECTOR, '[data-testid="tweet"]')
+                    app.logger.info(f"Found {len(tweet_elements)} tweet elements on page")
+                    
+                    # Process new tweets (avoid duplicates)
+                    existing_tweet_texts = {tweet['text'] for tweet in tweets}
+                    new_tweets_this_scroll = 0
+                    
+                    for tweet_elem in tweet_elements:
+                        try:
+                            # **YOUR ORIGINAL: Click 'Show more' buttons first**
+                            #click_show_more_buttons_bulk(tweet_elem, driver)
+                            click_show_more_buttons_bulk(tweet_elem, driver, twitter_url)
+                            
+                            # **YOUR ORIGINAL: IMPROVED TWEET TEXT EXTRACTION**
+                            tweet_text = extract_tweet_text_from_element_bulk(tweet_elem)
+                            
+                            # Extract timestamp
+                            try:
+                                time_elem = tweet_elem.find_element(By.CSS_SELECTOR, 'time')
+                                timestamp = time_elem.get_attribute('datetime')
+                                if timestamp:
+                                    from datetime import datetime
+                                    dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+                                    readable_timestamp = dt.strftime('%Y-%m-%d %H:%M:%S')
+                                else:
+                                    readable_timestamp = "Unknown"
+                            except:
+                                readable_timestamp = "Unknown"
+                            
+                            if (tweet_text and 
+                                len(tweet_text) >= 1 and 
+                                tweet_text not in existing_tweet_texts):
+                                
+                                tweets.append({
+                                    'text': tweet_text,
+                                    'timestamp': readable_timestamp,
+                                    'type': 'tweet'
+                                })
+                                existing_tweet_texts.add(tweet_text)
+                                new_tweets_this_scroll += 1
+                                app.logger.info(f"Extracted new tweet: {tweet_text[:50]}...")
+                                
+                        except Exception as e:
+                            app.logger.error(f"❌ Error extracting tweet from {twitter_url}: {e}")  # ✅ NEW
+                            continue
+                    
+                    app.logger.info(f"Added {new_tweets_this_scroll} new tweets this scroll (total: {len(tweets)})")
+                    
+                    # Check if we found new content
+                    if new_tweets_this_scroll == 0:
+                        no_new_content_count += 1
+                        app.logger.info(f"No new content found. Count: {no_new_content_count}/{max_no_new_content}")
+                    else:
+                        no_new_content_count = 0
+                    
+                    if no_new_content_count >= max_no_new_content:
+                        app.logger.info(f"Stopping: No new content found for {max_no_new_content} consecutive scrolls")
+                        break
+                            
+                except Exception as e:
+                    app.logger.error(f"Error scraping tweets at scroll position {scroll_attempt}: {e}")
+                
+                # **YOUR ORIGINAL: HUMAN-LIKE SCROLLING PATTERNS**
+                previous_position = driver.execute_script("return window.pageYOffset;")
+                
+                # Choose random scrolling pattern
+                scroll_pattern = random.choice(['small', 'medium', 'variable', 'burst'])
+                
+                if scroll_pattern == 'small':
+                    scroll_distance = random.randint(300, 800)
+                    driver.execute_script(f"window.scrollBy(0, {scroll_distance});")
+                    pause_time = random.uniform(2, 4)
+                elif scroll_pattern == 'medium':
+                    scroll_distance = random.randint(800, 1500)
+                    driver.execute_script(f"window.scrollBy(0, {scroll_distance});")
+                    pause_time = random.uniform(1.5, 3.5)
+                elif scroll_pattern == 'variable':
+                    total_scroll = random.randint(600, 1200)
+                    num_mini_scrolls = random.randint(2, 4)
+                    scroll_per_mini = total_scroll // num_mini_scrolls
+                    for mini_scroll in range(num_mini_scrolls):
+                        driver.execute_script(f"window.scrollBy(0, {scroll_per_mini});")
+                        time.sleep(random.uniform(0.2, 0.6))
+                    pause_time = random.uniform(2, 4)
+                elif scroll_pattern == 'burst':
+                    scroll_distance = random.randint(1200, 2000)
+                    driver.execute_script(f"window.scrollBy(0, {scroll_distance});")
+                    pause_time = random.uniform(3, 7)
+                
+                time.sleep(pause_time)
+                
+                # **YOUR ORIGINAL: HUMAN BEHAVIOR: Occasional scroll back up**
+                if random.random() < 0.15:  # 15% chance
+                    scroll_back = random.randint(100, 400)
+                    app.logger.info(f"Human behavior: Scrolling back up {scroll_back}px to 'recheck' something")
+                    driver.execute_script(f"window.scrollBy(0, -{scroll_back});")
+                    time.sleep(random.uniform(1, 3))
+                    driver.execute_script(f"window.scrollBy(0, {scroll_back + random.randint(50, 200)});")
+                    time.sleep(random.uniform(1, 2))
+                
+                # **YOUR ORIGINAL: HUMAN BEHAVIOR: Longer break every so often**
+                reading_break_counter += 1
+                if reading_break_counter >= random.randint(5, 8):
+                    long_break = random.uniform(5, 12)
+                    app.logger.info(f"Taking a longer 'reading/thinking' break for {long_break:.1f} seconds...")
+                    time.sleep(long_break)
+                    reading_break_counter = 0
+                
+                # **YOUR ORIGINAL: KEY BOTTOM DETECTION WITH SCROLL-UP STRATEGY**
+                new_position = driver.execute_script("return window.pageYOffset;")
+                if new_position == previous_position:
+                    suspected_bottom_attempts += 1
+                    app.logger.info(f"🔍 SUSPECTED BOTTOM REACHED (attempt {suspected_bottom_attempts}) - Triggering content loading strategy...")
+                    
+                    # **YOUR ORIGINAL: MULTI-SCROLL UP THEN BOTTOM STRATEGY**
+                    original_position = new_position
+                    
+                    # Phase 1: Multiple scrolls up with pauses to trigger lazy loading
+                    app.logger.info("📈 Phase 1: Scrolling up multiple times to trigger content loading...")
+                    scroll_up_attempts = random.randint(4, 7)  # 4-7 upward scrolls
+                    
+                    for up_attempt in range(scroll_up_attempts):
+                        scroll_up_distance = random.randint(800, 1500)
+                        driver.execute_script(f"window.scrollBy(0, -{scroll_up_distance});")
+                        
+                        up_pause = random.uniform(1.5, 3.5)
+                        app.logger.info(f"   Scroll up #{up_attempt + 1}: {scroll_up_distance}px, pausing {up_pause:.1f}s")
+                        time.sleep(up_pause)
+                        
+                        if random.random() < 0.3:
+                            extra_pause = random.uniform(2, 5)
+                            app.logger.info(f"   Extra pause: {extra_pause:.1f}s")
+                            time.sleep(extra_pause)
+                    
+                    # Phase 2: Extended pause to let Twitter's lazy loading system work
+                    major_pause = random.uniform(8, 15)
+                    app.logger.info(f"⏳ Phase 2: Extended pause for {major_pause:.1f}s to let Twitter load more content...")
+                    time.sleep(major_pause)
+                    
+                    # Phase 3: Scroll back to bottom (possibly with new content)
+                    app.logger.info("📉 Phase 3: Scrolling back to bottom to check for new content...")
+                    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                    
+                    bottom_load_pause = random.uniform(5, 8)
+                    app.logger.info(f"⏳ Waiting {bottom_load_pause:.1f}s for new content to load at bottom...")
+                    time.sleep(bottom_load_pause)
+                    
+                    # Check if new content appeared
+                    post_strategy_elements = driver.find_elements(By.CSS_SELECTOR, '[data-testid="tweet"]')
+                    if len(post_strategy_elements) > len(tweet_elements):
+                        app.logger.info(f"✅ SUCCESS! Found {len(post_strategy_elements) - len(tweet_elements)} more tweet elements after strategy")
+                        suspected_bottom_attempts = 0  # Reset counter since we found new content
+                        continue  # Continue with the main loop
+                    else:
+                        app.logger.info("❌ No new content found after up-scroll strategy")
+                    
+                    # If we've tried the strategy multiple times without success, we're probably done
+                    if suspected_bottom_attempts >= 2:
+                        app.logger.info(f"🏁 Confirmed bottom reached after {suspected_bottom_attempts} attempts with loading strategy")
+                        break
+                    else:
+                        app.logger.info(f"🔄 Will try the loading strategy again if needed (attempt {suspected_bottom_attempts}/2)")
+                else:
+                    # We successfully scrolled, reset the suspected bottom counter
+                    suspected_bottom_attempts = 0
+                
+                # **YOUR ORIGINAL: Random micro-movements**
+                if random.random() < 0.1:  # 10% chance
+                    micro_adjustment = random.randint(-50, 100)
+                    driver.execute_script(f"window.scrollBy(0, {micro_adjustment});")
+                    time.sleep(random.uniform(0.5, 1.5))
+            
+            # Save to database if we got tweets
+            if tweets:
+                content_text = f"Twitter profile: {twitter_url}\n\n"
+                for i, tweet in enumerate(tweets, 1):
+                    content_text += f"Tweet {i} ({tweet['timestamp']}):\n{tweet['text']}\n\n"
+                
+                conn = get_db_connection()
+                cur = conn.cursor()
+                
+                content_hash = hashlib.md5(content_text.encode()).hexdigest()
+                title = f"Twitter Profile - {len(tweets)} tweets"
+                
+                cur.execute("""
+                    INSERT INTO website_snapshots 
+                    (advisor_id, page_url, content_hash, page_title, content_text, last_checked, last_scan_checked)
+                    VALUES (%s, %s, %s, %s, %s, NOW(), NOW())
+                    ON CONFLICT (advisor_id, page_url) DO UPDATE SET
+                        content_hash = EXCLUDED.content_hash,
+                        content_text = EXCLUDED.content_text,
+                        last_scan_checked = NOW()
+                """, (advisor_id, twitter_url, content_hash, title, content_text))
+                
+                conn.commit()
+                release_db_connection(conn)
+                
+                # Update profile status to "monitored" 
+                update_profile_status_in_db(advisor_id, twitter_url, "monitored")
+                
+                app.logger.info(f"✅ Twitter saved: {twitter_url} ({len(tweets)} tweets)")
+                return True
+            else:
+                app.logger.warning(f"❌ No tweets found for: {twitter_url}")
+                return False
+            
+        except Exception as e:
+            app.logger.error(f"❌ Twitter scrape error for {twitter_url}: {e}")
+            return False
+        finally:
+            # ✅ CRITICAL FIX: Always return driver to pool, even on errors
+            if driver:
+                try:
+                    return_twitter_driver_to_pool(driver)
+                    app.logger.info(f"🔄 Driver returned to pool for {twitter_url}")
+                except Exception as return_error:
+                    app.logger.error(f"❌ Failed to return driver to pool: {return_error}")
+                    # If we can't return it, try to quit it to free resources
+                    try:
+                        driver.quit()
+                        app.logger.info(f"🛑 Driver quit instead of returned for {twitter_url}")
+                    except:
+                        pass
+    
+        return False
+    
+    # Process with DYNAMIC concurrent workers
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        tasks = [
+            executor.submit(scrape_single_twitter_full, advisor_id, twitter_url)
+            for advisor_id, twitter_url in twitter_links
+        ]
+        
+        completed = 0
+        successful = 0
+        
+        for future in concurrent.futures.as_completed(tasks):
+            completed += 1
+            if future.result():
+                successful += 1
+            
+            app.logger.info(f"🐦 Twitter progress: {completed}/{len(twitter_links)} completed, {successful} successful")
+
+    # ✅ NEW: Clean up the driver pool when done
+    #cleanup_twitter_driver_pool()
+    app.logger.info(f"🎉 Twitter bulk processing complete: {successful}/{len(twitter_links)} successful using {max_workers} workers")
+    
 from flask import request, Response
 import hashlib, hmac, xml.etree.ElementTree as ET
 
@@ -11404,7 +12340,7 @@ def retrieve_all_facebook():
 
 async def process_facebook_links(fb_links):
     """Run up to 15 workers in parallel, refill until all are processed."""
-    sem = asyncio.Semaphore(15)  # pool size
+    sem = asyncio.Semaphore(10)  # pool size
 
     async def worker(advisor_id, fb_url, session):
         async with sem:
@@ -11420,6 +12356,210 @@ async def process_facebook_links(fb_links):
         await asyncio.gather(*tasks)
 
 
+# Youtube Bulk Scraping
+
+def get_queued_counts_from_db():
+    """Get accurate queued counts from database"""
+    queued_counts = {}
+    
+    cursor.execute("SELECT advisor_id, profiles_data FROM advisor_profiles")
+    results = cursor.fetchall()
+    
+    for advisor_id, profiles_data in results:
+        count = 0
+        if profiles_data:
+            for profile in profiles_data:
+                platform = profile.get('platform', '')
+                url = profile.get('url', '')
+                
+                # Check if this profile is already monitored
+                is_monitored = False
+                
+                if platform == 'youtube' or 'youtube' in url:
+                    cursor.execute("SELECT COUNT(*) FROM youtube_videos WHERE channel_url = ? OR video_url = ?", (url, url))
+                    is_monitored = cursor.fetchone()[0] > 0
+                
+                # Add more platform checks as needed
+                
+                if not is_monitored:
+                    count += 1
+        
+        queued_counts[advisor_id] = count
+    
+    return queued_counts
+
+@app.route('/retrieve_all_youtube', methods=['POST'])
+def retrieve_all_youtube():
+    data = request.get_json()
+    yt_links = data.get("profiles", [])
+
+    app.logger.info(f"📥 Incoming YouTube profiles: {len(yt_links)} received")
+
+    if not yt_links:
+        return jsonify({"success": False, "message": "No queued YouTube profiles received"}), 400
+
+    # Fix date
+    import datetime
+    today = datetime.date.today()
+    app.logger.info(f"📅 Today = {today}")
+
+    # Spin off background task with 15-worker scraper
+    threading.Thread(
+        target=lambda: asyncio.run(process_youtube_links(
+            [(p["advisor_id"], p["url"]) for p in yt_links]
+        ))
+    ).start()
+
+    app.logger.info(f"🚀 Started background task for {len(yt_links)} profiles")
+    return jsonify({
+        "success": True,
+        "message": f"Started retrieving {len(yt_links)} queued YouTube profiles"
+    })
+
+
+async def process_youtube_links(yt_links):
+    """Run up to 15 workers in parallel, refill until all are processed."""
+    sem = asyncio.Semaphore(10)  # pool size
+
+    async def worker(advisor_id, yt_url, session):
+        async with sem:
+            try:
+                count = await fetch_youtube_page(session, yt_url, advisor_id)
+                print(f"✅ {yt_url} → {count} posts saved")
+            except Exception as e:
+                print(f"❌ Error fetching {yt_url}: {e}")
+
+    connector = aiohttp.TCPConnector(limit_per_host=15)
+    async with aiohttp.ClientSession(connector=connector) as session:
+        tasks = [worker(advisor_id, yt_url, session) for advisor_id, yt_url in yt_links]
+        await asyncio.gather(*tasks)
+
+
+async def fetch_youtube_page(session, youtube_url, advisor_id):
+    """Fetch YouTube channel/page content and save posts to database."""
+    try:
+        print(f"🎥 Fetching YouTube: {youtube_url}")
+        
+        # Run the synchronous YouTube functions in a thread pool to avoid blocking
+        import asyncio
+        from concurrent.futures import ThreadPoolExecutor
+        
+        def sync_youtube_processing():
+            try:
+                # Try API first (like your add_site does)
+                videos = fetch_youtube_videos_api(youtube_url, max_items=250)
+                print(f"🎯 YouTube API returned {len(videos)} videos")
+            except Exception as api_err:
+                print(f"⚠️ YouTube API failed: {api_err}. Falling back to Atom feed.")
+                videos = fetch_youtube_videos(youtube_url, max_items=25)
+                print(f"📻 Atom feed returned {len(videos)} videos")
+            
+            # Use your existing save function
+            saved = save_youtube_rows(advisor_id, youtube_url, "YouTube Channel", videos, snapshot_limit=0)
+            print(f"🎥 Saved {saved} YouTube videos to database")
+            
+            # Update advisor_profiles status to monitored
+            try:
+                conn = get_db_connection()
+                cursor = conn.cursor()
+                cursor.execute('''
+                    UPDATE advisor_profiles 
+                    SET profiles_data = (
+                        SELECT jsonb_agg(
+                            CASE 
+                                WHEN elem->>'url' = %s 
+                                THEN jsonb_set(elem, '{status}', '"monitored"')
+                                ELSE elem
+                            END
+                        )
+                        FROM jsonb_array_elements(profiles_data) AS elem
+                    )
+                    WHERE advisor_id = %s AND profiles_data IS NOT NULL
+                ''', (youtube_url, advisor_id))
+                conn.commit()
+                cursor.close()
+                release_db_connection(conn)
+            except Exception as e:
+                print(f"Error updating advisor_profiles status: {e}")
+            
+            return saved
+        
+        # Run the synchronous work in a thread pool
+        loop = asyncio.get_event_loop()
+        with ThreadPoolExecutor() as executor:
+            saved = await loop.run_in_executor(executor, sync_youtube_processing)
+        
+        return saved
+        
+    except Exception as e:
+        print(f"❌ Error fetching YouTube {youtube_url}: {e}")
+        return 0
+    
+@app.route('/get_queued_youtube_profiles', methods=['GET'])
+def get_queued_youtube_profiles():
+    """Get queued YouTube profiles from database with optional limit"""
+    conn = None
+    try:
+        # Get limit from query parameter (default 50 for batching)
+        limit = request.args.get('limit', 50, type=int)
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT advisor_id, profiles_data 
+            FROM advisor_profiles 
+            WHERE profiles_data::text LIKE '%youtube%'
+        """)
+        
+        results = cursor.fetchall()
+        queued_youtube = []
+        
+        for advisor_id, profiles_data in results:
+            if profiles_data:
+                for profile in profiles_data:
+                    if (profile.get('platform') == 'youtube' or 
+                        'youtube.com' in profile.get('url', '') or 
+                        'youtu.be' in profile.get('url', '')):
+                        
+                        cursor.execute("""
+                            SELECT COUNT(*) FROM youtube_videos 
+                            WHERE (channel_url = %s OR video_url = %s) AND advisor_id = %s
+                        """, (profile['url'], profile['url'], advisor_id))
+                        
+                        count = cursor.fetchone()[0]
+                        
+                        if count == 0:  # Not monitored yet = queued
+                            queued_youtube.append({
+                                'advisor_id': advisor_id,
+                                'url': profile['url'],
+                                'title': profile.get('name', 'YouTube Profile')
+                            })
+                            
+                            # Stop when we reach the limit
+                            if len(queued_youtube) >= limit:
+                                break
+                
+                # Break outer loop too if we've reached limit
+                if len(queued_youtube) >= limit:
+                    break
+        
+        return jsonify({
+            'success': True,
+            'profiles': queued_youtube,
+            'count': len(queued_youtube),
+            'limit_applied': limit,
+            'batch_complete': len(queued_youtube) < limit  # True if this was the last batch
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+    
+    finally:
+        if conn and connection_pool:
+            connection_pool.putconn(conn)
+            
+            
 @app.route('/run_concurrent_compliance_check', methods=['POST'])
 def run_concurrent_compliance_check():
     """Run compliance checks on multiple pages concurrently"""
@@ -11604,21 +12744,16 @@ limiter = Limiter(
 GOOGLE_API_KEY = "AIzaSyATnWGLnJZMiq4kdqMKOzPdqQ4l6SkGhnY"
 SEARCH_ENGINE_ID = "c2bf5ee9fed774e3d"
 
-try:
-    DEEPSEEK_API_KEY = "sk-236ec31139a5435fa2b4720c53601c09"
-    client = OpenAI(
-        api_key=DEEPSEEK_API_KEY,
-        base_url="https://api.deepseek.com/v1"
-    )
+DEEPSEEK_API_KEY = "sk-236ec31139a5435fa2b4720c53601c09"
+client = OpenAI(
+    api_key=DEEPSEEK_API_KEY,
+    base_url="https://api.deepseek.com/v1"
+)
 
-    OPENAI_API_KEY = "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"
-    openai_client = OpenAI(
-        api_key=OPENAI_API_KEY
-    )
-except Exception as e:
-    print(f"OpenAI client initialization failed: {e}")
-    client = None
-    openai_client = None
+OPENAI_API_KEY = "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"  # Add your OpenAI key
+openai_client = OpenAI(
+    api_key=OPENAI_API_KEY
+)
 
 PERPLEXITY_API_KEY = "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"
 
@@ -16964,17 +18099,96 @@ def add_site(advisor_id):
 
         lower = page_url.lower()
 
+        # ADD THIS DEBUG LOGGING
+        logger.info(f"🔍 DEBUG: lower = '{lower}'")
+        logger.info(f"🔍 DEBUG: 'x.com' in lower = {'x.com' in lower}")
+        logger.info(f"🔍 DEBUG: 'twitter.com' in lower = {'twitter.com' in lower}")
+
+
         # === Existing special-cases ===
         if 'x.com' in lower or 'twitter.com' in lower:
-            return handle_twitter_profile(advisor_id, page_url, page_title)
+            logger.info(f"🐦 TWITTER DETECTED! Calling handle_twitter_profile")
+            # UPDATE ADVISOR_PROFILES STATUS TO MONITORED
+            try:
+                conn = get_db_connection()
+                cursor = conn.cursor()
+                cursor.execute('''
+                    UPDATE advisor_profiles 
+                    SET profiles_data = (
+                        SELECT jsonb_agg(
+                            CASE 
+                                WHEN elem->>'url' = %s 
+                                THEN jsonb_set(elem, '{status}', '"monitored"')
+                                ELSE elem
+                            END
+                        )
+                        FROM jsonb_array_elements(profiles_data) AS elem
+                    )
+                    WHERE advisor_id = %s AND profiles_data IS NOT NULL
+                ''', (page_url, advisor_id))
+                conn.commit()
+                cursor.close()
+                release_db_connection(conn)
+            except Exception as e:
+                logger.error(f"Error updating advisor_profiles status: {e}")
+            return handle_twitter_profile(advisor_id, page_url, page_title)  # ✅ Use your existing function
 
         elif 'facebook.com' in lower or 'fb.com' in lower:
+            logger.info(f"📘 FACEBOOK DETECTED!")
+            # UPDATE ADVISOR_PROFILES STATUS TO MONITORED
+            try:
+                conn = get_db_connection()
+                cursor = conn.cursor()
+                cursor.execute('''
+                    UPDATE advisor_profiles 
+                    SET profiles_data = (
+                        SELECT jsonb_agg(
+                            CASE 
+                                WHEN elem->>'url' = %s 
+                                THEN jsonb_set(elem, '{status}', '"monitored"')
+                                ELSE elem
+                            END
+                        )
+                        FROM jsonb_array_elements(profiles_data) AS elem
+                    )
+                    WHERE advisor_id = %s AND profiles_data IS NOT NULL
+                ''', (page_url, advisor_id))
+                conn.commit()
+                cursor.close()
+                release_db_connection(conn)
+            except Exception as e:
+                logger.error(f"Error updating advisor_profiles status: {e}")
             return handle_facebook_graph(advisor_id, page_url, page_title)
 
         elif 'linkedin.com' in lower:
+            logger.info(f"💼 LINKEDIN DETECTED!")
+            # UPDATE ADVISOR_PROFILES STATUS TO MONITORED
+            try:
+                conn = get_db_connection()
+                cursor = conn.cursor()
+                cursor.execute('''
+                    UPDATE advisor_profiles 
+                    SET profiles_data = (
+                        SELECT jsonb_agg(
+                            CASE 
+                                WHEN elem->>'url' = %s 
+                                THEN jsonb_set(elem, '{status}', '"monitored"')
+                                ELSE elem
+                            END
+                        )
+                        FROM jsonb_array_elements(profiles_data) AS elem
+                    )
+                    WHERE advisor_id = %s AND profiles_data IS NOT NULL
+                ''', (page_url, advisor_id))
+                conn.commit()
+                cursor.close()
+                release_db_connection(conn)
+            except Exception as e:
+                logger.error(f"Error updating advisor_profiles status: {e}")
             return handle_linkedin_profile(advisor_id, page_url, page_title)
 
         elif 'youtube.com' in lower or 'youtu.be' in lower:
+            logger.info(f"🎬 YOUTUBE DETECTED!")
             from datetime import datetime
             used_api = False
             try:
@@ -17006,11 +18220,35 @@ def add_site(advisor_id):
                 try:
                     ch_id = resolve_channel_id_api(page_url) or resolve_youtube_channel_id(page_url)
                     if ch_id:
-                        subscribe_youtube_channel(advisor_id, ch_id, page_url)
+                        subscribe_youtube_channel(advisor_id, ch_id, page_url)  # ← ADD THIS LINE
                     else:
-                        logger.warning(f"⚠️ Could not resolve channel_id for {page_url}; skipping PubSub subscribe")
+                        logger.warning(f"⚠️ Could not resolve channel_id for {page_url}")
                 except Exception as sub_err:
-                    logger.warning(f"⚠️ PubSub subscribe failed for {page_url}: {sub_err}")
+                    logger.warning(f"⚠️ WebSub subscribe failed for {page_url}: {sub_err}")
+
+                # UPDATE ADVISOR_PROFILES STATUS TO MONITORED
+                try:
+                    conn = get_db_connection()
+                    cursor = conn.cursor()
+                    cursor.execute('''
+                        UPDATE advisor_profiles 
+                        SET profiles_data = (
+                            SELECT jsonb_agg(
+                                CASE 
+                                    WHEN elem->>'url' = %s 
+                                    THEN jsonb_set(elem, '{status}', '"monitored"')
+                                    ELSE elem
+                                END
+                            )
+                            FROM jsonb_array_elements(profiles_data) AS elem
+                        )
+                        WHERE advisor_id = %s AND profiles_data IS NOT NULL
+                    ''', (page_url, advisor_id))
+                    conn.commit()
+                    cursor.close()
+                    release_db_connection(conn)
+                except Exception as e:
+                    logger.error(f"Error updating advisor_profiles status: {e}")
 
                 # Normalize host for domain_details
                 host = urlparse(page_url).netloc.replace('www.', '').lower()
@@ -17094,75 +18332,125 @@ if os.environ.get("ENABLE_APSCHEDULER", "1") == "1":
     except Exception as e:
         logger.warning(f"APSCHEDULER not started: {e}")
 
-
-
+def update_profile_status_in_db(advisor_id, profile_url, new_status="monitored"):
+    """Update a profile's status in the advisor_profiles table - ROBUST VERSION"""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        logger.info(f"🔄 Attempting to update profile status: {profile_url} -> {new_status} for advisor {advisor_id}")
+        
+        # Use PostgreSQL JSONB functions to update directly in the database
+        cur.execute("""
+            UPDATE advisor_profiles 
+            SET profiles_data = (
+                SELECT jsonb_agg(
+                    CASE 
+                        WHEN profile->>'url' = %s 
+                        THEN jsonb_set(profile, '{status}', %s)
+                        ELSE profile 
+                    END
+                )
+                FROM jsonb_array_elements(profiles_data) AS profile
+            )
+            WHERE advisor_id = %s
+            AND EXISTS (
+                SELECT 1 
+                FROM jsonb_array_elements(profiles_data) AS profile 
+                WHERE profile->>'url' = %s
+            )
+        """, (profile_url, f'"{new_status}"', advisor_id, profile_url))
+        
+        rows_affected = cur.rowcount
+        
+        if rows_affected > 0:
+            conn.commit()
+            logger.info(f"✅ Successfully updated profile status in database: {profile_url} -> {new_status}")
+        else:
+            logger.warning(f"⚠️ No profile found to update: {profile_url} for advisor {advisor_id}")
+        
+        release_db_connection(conn)
+        return rows_affected > 0
+        
+    except Exception as e:
+        logger.error(f"❌ Error updating profile status: {e}", exc_info=True)
+        try:
+            release_db_connection(conn)
+        except:
+            pass
+        return False
+    
 def handle_twitter_profile(advisor_id, twitter_url, page_title):
     """Handle Twitter profile scraping"""
     try:
-        with db_lock:
-            conn = get_db_connection_sqlite()
-            c = conn.cursor()
-            
-            c.execute('SELECT name FROM advisors WHERE id = ?', (advisor_id,))
-            advisor = c.fetchone()
-            
-            if not advisor:
-                conn.close()
-                return render_template('add_link.html', 
-                                     advisor_id=advisor_id, 
-                                     error='Advisor not found')
-            
-            advisor_name = advisor[0]
-            
-            # Start Twitter scraping in background
-            def scrape_twitter_background():
-                try:
-                    tweets = scrape_twitter_profile(twitter_url)
-                    
-                    # **FIXED: Better content formatting**
-                    tweet_content = f"TWITTER PROFILE: {twitter_url}\n\n"
-                    for i, tweet in enumerate(tweets, 1):
-                        # Make sure we're getting the actual tweet text, not just timestamp
-                        tweet_text = tweet.get('text', '')
-                        tweet_timestamp = tweet.get('timestamp', 'Unknown')
-            
-                        if tweet_text and len(tweet_text) >= 1:  # Only add if we have real content
-                            # Format as: Tweet X (timestamp): actual content
-                            tweet_content += f"Tweet {i} ({tweet_timestamp}):\n{tweet_text}\n\n"
-                        else:
-                            logger.warning(f"Tweet {i} has no content: {tweet}")
+        # Use Postgres connection instead of SQLite
+        conn = get_db_connection()
+        cur = conn.cursor()
         
-                    logger.info(f"Final tweet content length: {len(tweet_content)} characters")
-                    logger.info(f"Content preview: {tweet_content[:200]}...")
-                    
-                    # Only save if we actually got content
-                    if len(tweets) > 0:
-                        content_hash = hashlib.md5(tweet_content.encode()).hexdigest()
-                        actual_title = page_title or f"Twitter Profile - {len(tweets)} tweets"
-                        
-                        # Save to database
-                        with db_lock:
-                            conn = get_db_connection_sqlite()
-                            c = conn.cursor()
-                            
-                            c.execute('''INSERT INTO website_snapshots 
-                                       (advisor_id, page_url, content_hash, page_title, content_text)
-                                       VALUES (?, ?, ?, ?, ?)''',
-                                     (advisor_id, twitter_url, content_hash, actual_title, tweet_content))
-                            
-                            conn.commit()
-                            conn.close()
-                            
-                        logger.info(f"Twitter profile scraped: {len(tweets)} tweets saved for {advisor_name}")
+        cur.execute('SELECT name FROM advisors WHERE id = %s', (advisor_id,))
+        advisor = cur.fetchone()
+        
+        if not advisor:
+            release_db_connection(conn)
+            return render_template('add_link.html', 
+                                 advisor_id=advisor_id, 
+                                 error='Advisor not found')
+        
+        advisor_name = advisor[0]
+        
+        # Start Twitter scraping in background
+        def scrape_twitter_background():
+            try:
+                tweets = scrape_twitter_profile(twitter_url)
+                
+                # Better content formatting
+                tweet_content = f"TWITTER PROFILE: {twitter_url}\n\n"
+                for i, tweet in enumerate(tweets, 1):
+                    tweet_text = tweet.get('text', '')
+                    tweet_timestamp = tweet.get('timestamp', 'Unknown')
+        
+                    if tweet_text and len(tweet_text) >= 1:
+                        tweet_content += f"Tweet {i} ({tweet_timestamp}):\n{tweet_text}\n\n"
                     else:
-                        logger.warning(f"No tweets extracted for {advisor_name}")
+                        logger.warning(f"Tweet {i} has no content: {tweet}")
+    
+                logger.info(f"Final tweet content length: {len(tweet_content)} characters")
+                logger.info(f"Content preview: {tweet_content[:200]}...")
+                
+                # Only save if we actually got content
+                if len(tweets) > 0:
+                    content_hash = hashlib.md5(tweet_content.encode()).hexdigest()
+                    actual_title = page_title or f"Twitter Profile - {len(tweets)} tweets"
                     
-                except Exception as e:
-                    logger.error(f"Error in Twitter background scraping: {e}")
-            
-            threading.Thread(target=scrape_twitter_background, daemon=True).start()
-            conn.close()
+                    # Save to Postgres database
+                    conn = get_db_connection()
+                    cur = conn.cursor()
+                    
+                    cur.execute('''INSERT INTO website_snapshots 
+                                   (advisor_id, page_url, content_hash, page_title, content_text, last_checked, last_scan_checked)
+                                   VALUES (%s, %s, %s, %s, %s, NOW(), NOW())
+                                   ON CONFLICT (advisor_id, page_url) DO UPDATE SET
+                                       content_hash = EXCLUDED.content_hash,
+                                       content_text = EXCLUDED.content_text,
+                                       last_scan_checked = NOW()''',
+                                 (advisor_id, twitter_url, content_hash, actual_title, tweet_content))
+                    
+                    conn.commit()
+                    release_db_connection(conn)
+                    
+                    # ✅ NEW: Update profile status to "monitored" in advisor_profiles
+                    update_profile_status_in_db(advisor_id, twitter_url, "monitored")
+                        
+                    logger.info(f"Twitter profile scraped: {len(tweets)} tweets saved for {advisor_name}")
+                else:
+                    logger.warning(f"No tweets extracted for {advisor_name}")
+                
+            except Exception as e:
+                logger.error(f"Error in Twitter background scraping: {e}")
         
+        threading.Thread(target=scrape_twitter_background, daemon=True).start()
+        release_db_connection(conn)
+    
         logger.info(f'Twitter profile {twitter_url} added to {advisor_name}! Scraping started.')
         return redirect(url_for('advisor_details', advisor_id=advisor_id))
         
@@ -17398,7 +18686,6 @@ def monitor_advisor_for_new_site(advisor_id, website_url):
         except Exception as e:
             logger.error(f"Error in monitor_advisor_for_new_site: {str(e)}")
             
-# Add/Delete funciton for advisor details can delete when going live (OR HIDE)
 @app.route('/delete_website/<int:advisor_id>', methods=['POST'])
 def delete_website(advisor_id):
     """Delete a website/domain from an advisor"""
@@ -17409,43 +18696,56 @@ def delete_website(advisor_id):
         if not domain_to_delete:
             return jsonify({'success': False, 'error': 'Domain is required'}), 400
         
-        with db_lock:
-            conn = get_db_connection_sqlite()
-            c = conn.cursor()
-    
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        try:
             # Verify advisor exists
-            c.execute('SELECT name FROM advisors WHERE id = ?', (advisor_id,))
-            advisor = c.fetchone()
+            cursor.execute('SELECT name FROM advisors WHERE id = %s', (advisor_id,))
+            advisor = cursor.fetchone()
     
             if not advisor:
-                conn.close()
                 return jsonify({'success': False, 'error': 'Advisor not found'}), 404
     
             # GET URLS BEFORE DELETION
-            c.execute('SELECT DISTINCT page_url FROM website_snapshots WHERE advisor_id = ? AND page_url LIKE ?', 
-                     (advisor_id, f'%{domain_to_delete}%'))
-            deleted_urls = [row[0] for row in c.fetchall()]
+            cursor.execute('''SELECT DISTINCT page_url FROM website_snapshots 
+                             WHERE advisor_id = %s AND page_url LIKE %s''', 
+                          (advisor_id, f'%{domain_to_delete}%'))
+            deleted_urls = [row[0] for row in cursor.fetchall()]
     
             # Delete all snapshots for pages that belong to this domain
-            c.execute('''DELETE FROM website_snapshots 
-                        WHERE advisor_id = ? AND page_url LIKE ?''', 
-                     (advisor_id, f'%{domain_to_delete}%'))
-            deleted_snapshots = c.rowcount
+            cursor.execute('''DELETE FROM website_snapshots 
+                             WHERE advisor_id = %s AND page_url LIKE %s''', 
+                          (advisor_id, f'%{domain_to_delete}%'))
+            deleted_snapshots = cursor.rowcount
     
-            # Delete all changes for this advisor/domain
-            c.execute('''DELETE FROM changes 
-                        WHERE advisor_id = ? AND page_url LIKE ?''', 
-                     (advisor_id, f'%{domain_to_delete}%'))
-            deleted_changes = c.rowcount
+            # Delete all changes for this advisor (changes table doesn't have page_url)
+            cursor.execute('''DELETE FROM changes 
+                             WHERE advisor_id = %s''', 
+                          (advisor_id,))
+            deleted_changes = cursor.rowcount
     
             # Delete all compliance issues for this advisor/domain
-            c.execute('''DELETE FROM compliance_issues 
-                        WHERE advisor_id = ? AND page_url LIKE ?''', 
-                     (advisor_id, f'%{domain_to_delete}%'))
-            deleted_issues = c.rowcount
+            cursor.execute('''DELETE FROM compliance_issues 
+                             WHERE advisor_id = %s AND page_url LIKE %s''', 
+                          (advisor_id, f'%{domain_to_delete}%'))
+            deleted_issues = cursor.rowcount
+    
+            # Clean up advisor_profiles.profiles_data - remove deleted URLs
+            if deleted_urls:
+                cursor.execute('''
+                    UPDATE advisor_profiles 
+                    SET profiles_data = (
+                        SELECT jsonb_agg(elem)
+                        FROM jsonb_array_elements(profiles_data) AS elem
+                        WHERE NOT (elem->>'url' LIKE %s)
+                    )
+                    WHERE advisor_id = %s AND profiles_data IS NOT NULL
+                ''', (f'%{domain_to_delete}%', advisor_id))
+                
+                logger.info(f"Updated advisor_profiles for advisor {advisor_id}, removed URLs matching {domain_to_delete}")
     
             conn.commit()
-            conn.close()
     
             logger.info(f"Deleted website {domain_to_delete} for advisor {advisor_id}: "
                        f"{deleted_snapshots} pages, {deleted_changes} changes, {deleted_issues} issues")
@@ -17461,10 +18761,17 @@ def delete_website(advisor_id):
                 'deleted_urls': deleted_urls
             })
             
+        except Exception as e:
+            conn.rollback()
+            raise e
+        finally:
+            cursor.close()
+            release_db_connection(conn)
+            
     except Exception as e:
         logger.error(f"Error deleting website: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
-
+    
 @app.route('/add_website/<int:advisor_id>', methods=['POST'])
 def add_website(advisor_id):
     """Add a new website to an advisor"""
@@ -18361,6 +19668,52 @@ def cleanup_advisors():
         
     except Exception as e:
         return f"Error during cleanup: {str(e)}"
+
+
+@app.route('/get_all_queued_profiles', methods=['GET'])
+def get_all_queued_profiles():
+    """Get ALL queued profiles from database"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT advisor_id, profiles_data FROM advisor_profiles")
+        results = cursor.fetchall()
+        
+        all_queued = {
+            'facebook': [],
+            'twitter': [],  
+            'youtube': []
+        }
+        
+        for advisor_id, profiles_data in results:
+            if profiles_data:
+                for profile in profiles_data:
+                    # Only include if not monitored
+                    if profile.get('status') != 'monitored':
+                        profile_data = {
+                            'advisor_id': advisor_id,
+                            'url': profile['url'],
+                            'title': profile.get('name', 'Profile')
+                        }
+                        
+                        if profile.get('platform') == 'facebook':
+                            all_queued['facebook'].append(profile_data)
+                        elif profile.get('platform') in ['twitter'] or 'x.com' in profile.get('url', '') or 'twitter.com' in profile.get('url', ''):
+                            all_queued['twitter'].append(profile_data)
+                        elif profile.get('platform') == 'youtube' or 'youtube.com' in profile.get('url', ''):
+                            all_queued['youtube'].append(profile_data)
+        
+        cursor.close()
+        release_db_connection(conn)
+        
+        return jsonify({
+            'success': True,
+            'profiles': all_queued
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/advisor-dashboard')
 def dashboard():
@@ -23152,17 +24505,10 @@ def remove_repeated_phrases_v2(text):
 
 
 # Load the spaCy model for English (you need to run 'python -m spacy download en_core_web_sm' once)
-# nlp = spacy.load("en_core_web_sm")
-if spacy is not None:
-    try:
-        nlp = spacy.load("en_core_web_sm")
-    except:
-        nlp = None
-else:
-    nlp = None
+nlp = spacy.load("en_core_web_sm")
 
 # Add the sentencizer to improve sentence splitting
-if nlp is not None and "sentencizer" not in nlp.pipe_names:
+if "sentencizer" not in nlp.pipe_names:
     nlp.add_pipe("sentencizer")
     
 
@@ -23312,16 +24658,8 @@ def analyze_text(text):
         #return False
 
 from flask import request, jsonify, send_file
-
-try:
-    from reportlab.pdfgen import canvas
-    from reportlab.lib.pagesizes import letter
-    REPORTLAB_AVAILABLE = True
-except ImportError:
-    canvas = None
-    letter = None
-    REPORTLAB_AVAILABLE = False
-    
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
 from io import BytesIO
 
 @app.route('/convert_text_to_pdf', methods=['POST'])
