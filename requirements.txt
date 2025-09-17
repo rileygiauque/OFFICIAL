@@ -31,6 +31,7 @@ cryptography
 requests>=2.25.1
 schedule
 psutil
+httpx==0.24.1
 
 # AI / ML stack
 transformers==4.45.0
