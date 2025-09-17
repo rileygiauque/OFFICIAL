@@ -31,9 +31,9 @@ cryptography
 requests>=2.25.1
 
 # AI / ML stack
-transformers==4.44.2
-tokenizers==0.19.1
+transformers==4.45.0
+tokenizers==0.20.3
 
 # Use CPU-only build of torch to avoid 20-minute CUDA downloads
-torch==2.8.0+cpu
 --extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.8.0+cpu
